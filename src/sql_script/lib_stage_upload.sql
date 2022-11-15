@@ -18,4 +18,7 @@ PUT file://./src/python/in-network-rates/ingest-in-network-rates-seg-header_sp.p
 PUT file://./src/python/in-network-rates/ingest-in-network-rates-segments_sp.py @sflk_pricing_transperancy.public.lib_stg/scripts
     overwrite = true;
 
+PUT file://./src/python/in-network-rates/in-network-rates-segment-dagbuilder.py @sflk_pricing_transperancy.public.lib_stg/scripts
+    overwrite = true;
+
 list @sflk_pricing_transperancy.public.lib_stg/scripts;

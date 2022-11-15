@@ -8,7 +8,7 @@ import _snowflake
 from zipfile import ZipFile
 import json
 
-logger = logging.getLogger("innetwork_rates_ingestor_sp")
+logger = logging.getLogger("innetwork_rates_segment_ingestor_sp")
 
 DEFAULT_BATCH_SIZE = 1000
 
@@ -51,14 +51,16 @@ def iterate_childobjecttypes_and_save(p_session: Session ,p_approx_batch_size: i
 
     return total_rec_count
 
-def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str ,p_datafile: str ,p_segment_to_parse: str):
+def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str ,p_datafile: str 
+    ,p_segment_to_parse: str ,p_negotiation_arrangement_segment_id: str):
     logger.info('Parsing and breaking down in_network ...')
     l_approx_batch_size = max(p_approx_batch_size ,DEFAULT_BATCH_SIZE )
     seg_record_counts = 0
     json_fl = f'@{p_stage_path}/{p_datafile}'
 
     target_table = p_segment_to_parse
-
+    header_id = ''
+    
     with ZipFile(_snowflake.open(json_fl)) as zf:
         for file in zf.namelist():
             with zf.open(file) as f:
@@ -72,27 +74,39 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_p
                     header_id = f'''{rec['negotiation_arrangement']}::{rec['name']}'''
                     header_id = header_id.upper().replace(' ','_').replace('\t','_')
 
+                    if (p_negotiation_arrangement_segment_id.strip() != '') and (header_id != p_negotiation_arrangement_segment_id):
+                        continue
+
                     c_nr = iterate_childobjecttypes_and_save(p_session ,l_approx_batch_size ,p_datafile 
                         ,header_id ,rec[p_segment_to_parse] ,p_segment_to_parse ,target_table)
                     seg_record_counts = seg_record_counts + c_nr
                     
-    return seg_record_counts
+                    break
 
-def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str ,p_negotiation_arrangement_segment: str):
+    header_id_hash = hash(header_id)    
+    return (seg_record_counts ,header_id_hash)
+
+def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str ,p_negotiation_arrangement_segment: str
+    ,p_negotiation_arrangement_segment_id: str):
     ret = {}
     ret['data_file'] = p_datafile
-    
+    ret['negotiation_arrangement_segment'] = p_negotiation_arrangement_segment
+    ret['negotiation_arrangement_id'] = p_negotiation_arrangement_segment_id
 
     if p_negotiation_arrangement_segment not in ['negotiated_rates' ,'bundled_codes' ,'covered_services']:
         ret['status'] = False
         ret['ERROR_REASON'] = '''allowed values for parameter 'negotiation_arrangement_segment':  'negotiated_rates' ,'bundled_codes' ,'covered_services' '''
         return ret
 
+    seg_record_counts ,header_id_hash = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
+        ,p_negotiation_arrangement_segment ,p_negotiation_arrangement_segment_id)
 
-    seg_record_counts = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile ,p_negotiation_arrangement_segment)
+
+    # task_name = f'tsk_{header_id_hash}'.replace('-','_')
+    # sql_stmt = f'alter task if exists {task_name} suspend;'
+    # p_session.sql(sql_stmt).collect()
 
     ret['ingested_record_counts'] = seg_record_counts
-    
     ret['status'] = True
     return ret
 

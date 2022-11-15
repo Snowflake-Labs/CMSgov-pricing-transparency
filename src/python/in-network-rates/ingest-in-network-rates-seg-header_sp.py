@@ -8,7 +8,7 @@ import _snowflake
 from zipfile import ZipFile
 import json
 
-logger = logging.getLogger("innetwork_rates_ingestor_sp")
+logger = logging.getLogger("innetwork_rates_seg-header_ingestor_sp")
 
 DEFAULT_BATCH_SIZE = 1000
 IN_NETWORK_RATES_SEGHDR_TBL = 'in_network_rates_segment_header'

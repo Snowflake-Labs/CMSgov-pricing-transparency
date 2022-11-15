@@ -45,7 +45,7 @@ def parse_file_headers(p_stage_path: str ,p_datafile: str ):
     
     return headers
 
-def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str ):
+def main(p_session: Session ,p_stage_path: str  ,p_datafile: str ):
     ret = {}
     ret['data_file'] = p_datafile
     
