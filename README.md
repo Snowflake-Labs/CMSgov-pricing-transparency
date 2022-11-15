@@ -65,8 +65,8 @@ Here are some queries that can be issued against the data.
   
 ### Speeding up ingestion
 
-  This demonstration showcases how to parse the large file; the data ingestion is <span style="color:red">slow</span> on the current implementation. It is taking a 4+ hours to load the files entirely. 
+  This demonstration showcases how to parse the large file; the data ingestion is **<span style="color:red">slow</span>** on the current implementation. It is taking a 4+ hours to load the files entirely. 
   
   However there are possiblities to parallelize and improve the speed of ingestion. These improvements are left to adopters of this demo. We will also experiment such approaches on our own too.
 
-  <span style="color:blue">We Will be trying to co-ordinate with the product team to give some feedback. </span>
+  **<span style="color:blue">We Will be trying to co-ordinate with the product team to give some feedback. </span>**
