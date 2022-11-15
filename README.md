@@ -66,3 +66,8 @@ Here are some queries that can be issued against the data.
 ### Speeding up ingestion
 
   This demonstration showcases how to parse the large file; the data ingestion is slow on the current implementation. However there are possiblities to parallelize and improve the speed of ingestion. These improvements are left to adopters of this demo.
+
+
+## MAIN CONCERN FOR NOW (Being worked upon):
+ - Improve the speed of ingestion (from 4+ hours to down)
+ - Talk to product team on how to address this issue
