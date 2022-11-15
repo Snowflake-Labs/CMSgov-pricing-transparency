@@ -78,11 +78,18 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_p
                     
     return seg_record_counts
 
-def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str ,p_segment_to_parse: str):
+def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str ,p_negotiation_arrangement_segment: str):
     ret = {}
     ret['data_file'] = p_datafile
     
-    seg_record_counts = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile ,p_segment_to_parse)
+
+    if p_negotiation_arrangement_segment not in ['negotiated_rates' ,'bundled_codes' ,'covered_services']:
+        ret['status'] = False
+        ret['ERROR_REASON'] = '''allowed values for parameter 'negotiation_arrangement_segment':  'negotiated_rates' ,'bundled_codes' ,'covered_services' '''
+        return ret
+
+
+    seg_record_counts = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile ,p_negotiation_arrangement_segment)
 
     ret['ingested_record_counts'] = seg_record_counts
     
