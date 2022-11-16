@@ -3,6 +3,8 @@ import pandas as pd
 from snowflake.snowpark.session import Session
 import snowflake.snowpark.functions as F
 import _snowflake
+import random
+import string
 
 logger = logging.getLogger("innetwork_rates_segment_dagbuilder_sp")
 
@@ -55,9 +57,9 @@ def iterate_define_ddl(p_session: Session ,p_root_task_name: str
     # Split the segments ranges into buckets
     max_rec_num = df['REC_NUM'].max()
     ranges = split_range_into_buckets(max_rec_num ,BUCKETS)
-    
+    tm = p_datafile.replace('-','_').replace('.zip','')
+
     for idx,(m ,n) in enumerate(ranges):
-        tm = p_datafile.replace('-','_').replace('.zip','')
         task_name = f'''T_{tm}_{m}_{n}'''
         
         ddl = f'''
@@ -75,6 +77,28 @@ def iterate_define_ddl(p_session: Session ,p_root_task_name: str
         
     
     return task_ddls
+
+
+def define_subtasks_suspender(p_session: Session ,p_datafile: str ,p_root_task_name: str ,p_predecessor_tasks):
+    predecessor_tasks_str = ','.join(p_predecessor_tasks)
+    
+    letters = string.ascii_uppercase
+    tm = ''.join(random.choice(letters) for i in range(10))
+    # tm = p_datafile.replace('-','_').replace('.zip','')
+    task_name = f'''T_{tm}_dag_suspender'''
+    ddl = f'''
+            create or replace task {task_name}
+                WAREHOUSE = dev_pctransperancy_demo_wh
+                comment = 'terminal task for sub tasks of root task: {p_root_task_name}'
+                after {predecessor_tasks_str}
+                as
+                call innetwork_rates_dagsuspender('{p_root_task_name}');
+            '''
+    p_session.sql(ddl).collect()
+
+    p_session.sql(f'alter task {task_name} resume').collect()
+    return task_name
+
 
 def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str):
     ret = {}
@@ -109,6 +133,11 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
             break
         idx += 1
         
+
+    predecessor_sub_tasks = [ task_name for task_name ,tddl in task_ddls ]
+    suspender_task = define_subtasks_suspender(p_session ,p_datafile ,root_task_name ,predecessor_sub_tasks)
+    ret['suspender_task'] = suspender_task
+
     p_session.sql(f'alter task if exists {root_task_name} resume;').collect()
            
     # ret['task_errored'] = task_def_errors    

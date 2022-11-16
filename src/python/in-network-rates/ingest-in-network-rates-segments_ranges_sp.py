@@ -100,26 +100,22 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
         return ret
 
     start = datetime.datetime.now()
-    seg_record_counts ,header_id_hash = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
+    seg_record_counts  = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
         ,p_negotiation_arrangement_segment ,p_start_rec_num ,p_end_rec_num)
     end = datetime.datetime.now()
 
     elapsed = (end - start)
-    ret['elapsed'] =  elapsed
-
-    # task_name = f'tsk_{header_id_hash}'.replace('-','_')
-    # sql_stmt = f'alter task if exists {p_task_name} suspend;'
-    # p_session.sql(sql_stmt).collect()
-
+    ret['elapsed'] =  f'=> {elapsed} '
     ret['ingested_record_counts'] = seg_record_counts
-    ret['status'] = True
-
+    
     ret_str = str(ret)
+    ret_str = ret_str.replace('\'', '"')
     sql_stmt = f'''
         insert into segment_task_execution_status(task_name ,task_ret_status) values('{p_task_name}' ,'{ret_str}');
     '''
     p_session.sql(sql_stmt).collect()
     
+    ret['status'] = True
     return ret
 
 ## ---------

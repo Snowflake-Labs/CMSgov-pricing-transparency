@@ -69,3 +69,13 @@ create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_dag
     imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/in-network-rates-segment-dagbuilder.py')
     handler = 'in-network-rates-segment-dagbuilder.main'
     ;
+
+create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_dagsuspender(
+    root_task varchar)
+    returns variant
+    language python
+    runtime_version = '3.8'
+    packages = ('snowflake-snowpark-python' ,'pandas')
+    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/in-network-rates-dag-suspender.py')
+    handler = 'in-network-rates-dag-suspender.main'
+    ;
