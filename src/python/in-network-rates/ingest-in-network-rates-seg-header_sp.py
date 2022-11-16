@@ -8,7 +8,7 @@ import _snowflake
 from zipfile import ZipFile
 import json
 
-logger = logging.getLogger("innetwork_rates_ingestor_sp")
+logger = logging.getLogger("innetwork_rates_seg-header_ingestor_sp")
 
 DEFAULT_BATCH_SIZE = 1000
 IN_NETWORK_RATES_SEGHDR_TBL = 'in_network_rates_segment_header'
@@ -28,7 +28,7 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_p
     seg_record_counts = 0
     json_fl = f'@{p_stage_path}/{p_datafile}'
 
-    rec_count = 0
+    rec_count = -1
     with ZipFile(_snowflake.open(json_fl)) as zf:
         for file in zf.namelist():
             with zf.open(file) as f:
@@ -41,13 +41,14 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_p
                     rec_count += 1
 
                     curr_rec = {}
-                    curr_rec['file'] = p_datafile
+                    curr_rec['rec_num'] = rec_count
+                    curr_rec['data_file'] = p_datafile
                     curr_rec['negotiation_arrangement_header'] = str(innetwork_hdr)
                     curr_rec['header_id'] = header_id
                     curr_rec['header_id_hash'] = header_id_hash
                     batch_records.append(curr_rec)
 
-                    if len(batch_records) >= p_approx_batch_size:
+                    if len(batch_records) >= l_approx_batch_size:
                         df = pd.DataFrame(batch_records)
                         append_to_table(p_session ,df ,IN_NETWORK_RATES_SEGHDR_TBL)
                         batch_records.clear()
