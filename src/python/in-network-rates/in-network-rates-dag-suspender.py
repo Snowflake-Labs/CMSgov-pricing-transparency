@@ -33,7 +33,6 @@ def get_subtasks(p_session: Session ,p_root_task_name: str):
     
     return sub_tasks
 
-
 def split_range_into_buckets(p_range_max, p_num_buckets):
     step = p_range_max / p_num_buckets
     return [(round(step*i), round(step*(i+1))) for i in range(p_num_buckets)]
@@ -61,8 +60,6 @@ def iterate_define_ddl(p_session: Session ,p_datafile: str ,p_buckets: int):
         
     return sub_tasks
 
-
-
 def main(p_session: Session ,p_root_task_name: str ,p_datafile: str ,p_buckets: int):
     ret = {}
     ret['root_task_name'] = p_root_task_name
@@ -71,7 +68,7 @@ def main(p_session: Session ,p_root_task_name: str ,p_datafile: str ,p_buckets: 
     sub_tasks = iterate_define_ddl(p_session ,p_datafile ,p_buckets)
     ret['no_of_subtasks'] = len(sub_tasks)
 
-    # p_session.sql(f'alter task if exists {p_root_task_name} suspend;').collect()
+    p_session.sql(f'alter task if exists {p_root_task_name} suspend;').collect()
 
     task_def_errors = []
     
@@ -96,7 +93,7 @@ def main(p_session: Session ,p_root_task_name: str ,p_datafile: str ,p_buckets: 
     ret['suspended_tasks_count'] = len(tasks_suspended)
     
     p_session.sql(f'alter task if exists {p_root_task_name} suspend;').collect()
-    p_session.sql(f'drop task if exists {p_root_task_name};').collect()
+    # p_session.sql(f'drop task if exists {p_root_task_name};').collect()
 
     ret['status'] = True
     return ret

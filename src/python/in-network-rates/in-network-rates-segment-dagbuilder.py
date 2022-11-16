@@ -15,11 +15,11 @@ IN_NETWORK_RATES_SEGHDR_TBL = 'in_network_rates_segment_header'
 def create_root_task_and_fh_loader(p_session: Session ,p_root_task_name: str ,p_stage_path: str ,p_datafile: str): 
     logger.info(f'Creating the root task ddl ...')
 
-    # schedule = 'using cron 30 2 L 6 * UTC'
     sql_stmts = [
         f'alter task if exists {p_root_task_name} suspend;'
         ,f'''
             create or replace task {p_root_task_name}
+                schedule = 'using cron 30 2 L 6 * UTC'
                 comment = 'DAG to load data for file: {p_datafile}'
                 as
                 select current_timestamp;
@@ -114,9 +114,9 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     for task_name ,tddl in task_ddls:
         try:
             sql_stmts = [
-                # f'alter task if exists {task_name} suspend;' ,
-                tddl
-                # ,f'alter task if exists {task_name} resume;'
+                f'alter task if exists {task_name} suspend;'
+                ,tddl
+                ,f'alter task if exists {task_name} resume;'
             ]
             for stmt in sql_stmts:
                 p_session.sql(stmt).collect()
@@ -139,7 +139,7 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     suspender_task = define_subtasks_suspender(p_session ,p_datafile ,root_task_name ,p_buckets ,predecessor_sub_tasks)
     ret['suspender_task'] = suspender_task
 
-    # p_session.sql(f'alter task if exists {root_task_name} resume;').collect()
+    p_session.sql(f'alter task if exists {root_task_name} resume;').collect()
            
     # ret['task_errored'] = task_def_errors    
     ret['root_task_name'] = task_ddls
