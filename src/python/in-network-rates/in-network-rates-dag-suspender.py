@@ -40,6 +40,8 @@ def main(p_session: Session ,p_root_task_name: str):
     sub_tasks = get_subtasks(p_session ,p_root_task_name)
     ret['no_of_subtasks'] = len(sub_tasks)
 
+    p_session.sql(f'alter task if exists {p_root_task_name} suspend;').collect()
+
     task_def_errors = []
     tasks_suspended = 0
     for idx, task_name in enumerate(sub_tasks):

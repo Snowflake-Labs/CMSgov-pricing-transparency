@@ -43,7 +43,7 @@ def split_range_into_buckets(p_range_max, p_num_buckets):
     return [(round(step*i), round(step*(i+1))) for i in range(p_num_buckets)]
 
 def iterate_define_ddl(p_session: Session ,p_root_task_name: str 
-    ,p_approx_batch_size: int ,p_stage_path: str ,p_datafile: str): 
+    ,p_approx_batch_size: int ,p_stage_path: str ,p_datafile: str ,p_buckets: int): 
     logger.info(f'Creating the task ddl ...')
 
     # DDL task creation
@@ -56,7 +56,8 @@ def iterate_define_ddl(p_session: Session ,p_root_task_name: str
 
     # Split the segments ranges into buckets
     max_rec_num = df['REC_NUM'].max()
-    ranges = split_range_into_buckets(max_rec_num ,BUCKETS)
+    l_buckets = max(BUCKETS ,p_buckets) - 4;
+    ranges = split_range_into_buckets(max_rec_num ,l_buckets)
     tm = p_datafile.replace('-','_').replace('.zip','')
 
     for idx,(m ,n) in enumerate(ranges):
@@ -100,7 +101,7 @@ def define_subtasks_suspender(p_session: Session ,p_datafile: str ,p_root_task_n
     return task_name
 
 
-def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str):
+def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str ,p_buckets: int):
     ret = {}
     ret['data_file'] = p_datafile
 
@@ -108,7 +109,7 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     create_root_task_and_fh_loader(p_session ,root_task_name ,p_stage_path ,p_datafile)
 
     task_def_errors = []
-    task_ddls = iterate_define_ddl(p_session ,root_task_name ,p_approx_batch_size ,p_stage_path ,p_datafile)
+    task_ddls = iterate_define_ddl(p_session ,root_task_name ,p_approx_batch_size ,p_stage_path ,p_datafile ,p_buckets)
     idx = 0
     for task_name ,tddl in task_ddls:
         try:

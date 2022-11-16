@@ -61,7 +61,7 @@ create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_seg
 
 
 create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_dagbuilder(
-    batch_size integer ,stage_path varchar ,staged_data_flname varchar)
+    batch_size integer ,stage_path varchar ,staged_data_flname varchar ,subtask_bucket_count integer)
     returns variant
     language python
     runtime_version = '3.8'
