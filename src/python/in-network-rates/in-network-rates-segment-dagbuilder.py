@@ -114,9 +114,9 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     for task_name ,tddl in task_ddls:
         try:
             sql_stmts = [
-                f'alter task if exists {task_name} suspend;'
-                ,tddl
-                ,f'alter task if exists {task_name} resume;'
+                # f'alter task if exists {task_name} suspend;' ,
+                tddl
+                # ,f'alter task if exists {task_name} resume;'
             ]
             for stmt in sql_stmts:
                 p_session.sql(stmt).collect()
@@ -139,7 +139,7 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     suspender_task = define_subtasks_suspender(p_session ,p_datafile ,root_task_name ,p_buckets ,predecessor_sub_tasks)
     ret['suspender_task'] = suspender_task
 
-    p_session.sql(f'alter task if exists {root_task_name} resume;').collect()
+    # p_session.sql(f'alter task if exists {root_task_name} resume;').collect()
            
     # ret['task_errored'] = task_def_errors    
     ret['root_task_name'] = task_ddls

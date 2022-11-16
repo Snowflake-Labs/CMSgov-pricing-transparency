@@ -69,9 +69,11 @@ For this to work,
 Here are some observations
  - 50 Buckets took 2 hours
  - 61 Buckets took 1 hour
- - 90 Buckets
+ - 90 Buckets took 50 minutes
 
-Task has a limitation of only 100 children/parent; hence we did not want to reach the max levels.
+Task has a limitation of only 100 children/parent; hence we did not want to reach the max levels. 
+
+Also, if the DAG/Scheduling is orchestreted/managed externally, ex: airflow etc, i beleive we could reduce the time even further.
 
 We also create a "suspender" task, at the end of DAG. This essentially runs after all the tasks are executed. Its main purpose
 is to cleanup the entire dag tree. 
