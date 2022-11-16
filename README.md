@@ -25,6 +25,7 @@ Some key points to note, when it comes to providing this file are:
 ### Ingesting Pricing Transperancy Files
 Here are some examples of files, from providers:
   - [Priority Health](https://www.priorityhealth.com/landing/transparency)
+  - [Cigna](https://www.cigna.com/legal/compliance/machine-readable-files)
   - *TO ADD MORE WEBSITES *
 
 These files (ex: https://priorityhealthtransparencymrfs.s3.amazonaws.com/HMO.html) are large (multi GB). They are also distributed as compressed json files. In our example a <span style="color:blue">450MB</span> compressed ZIP file, turned out to be <span style="color:blue">13.5GB</span> uncompressed.
@@ -58,6 +59,9 @@ Here are some queries that can be issued against the data.
 - [Doc: Solution walk thru](./doc/Solution.md)
 
 ## Concerns and Limitations
+   
+  - The current implementation has been tested only with 13GB; Further tests need to be conducxted on larger file sizes
+  - All code is shared as-is, It is upto the consumer to productionalize the work and update the code/functionality based on thier situation. We will not be supporting or liable. Effort will be taken to help the consumer to answer any queries related to the functionality  
 
 ### Snowflake Features
 
