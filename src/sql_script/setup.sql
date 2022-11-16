@@ -32,9 +32,19 @@ create or replace stage sflk_pricing_transperancy.public.data_stg
 -- ============================
 -- Table definitions
 -- ============================
+
+create or replace transient table segment_task_execution_status (
+    task_name varchar
+    ,task_ret_status varchar
+    ,elapsed varchar
+    ,inserted_at timestamp default current_timestamp()
+);
+
+
+
 create or replace transient table negotiated_rates ( 
     record_num number
-    ,file varchar
+    ,data_file varchar
     ,header_id varchar
     ,header_id_hash number
     ,negotiated_rates varchar

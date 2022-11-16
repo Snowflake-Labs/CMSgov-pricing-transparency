@@ -6,7 +6,7 @@ from snowflake.snowpark.session import Session
 import snowflake.snowpark.functions as F
 import _snowflake
 from zipfile import ZipFile
-import json
+import datetime
 
 logger = logging.getLogger("innetwork_rates_segment_ingestor_sp")
 
@@ -52,7 +52,7 @@ def iterate_childobjecttypes_and_save(p_session: Session ,p_approx_batch_size: i
     return total_rec_count
 
 def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str ,p_datafile: str 
-    ,p_segment_to_parse: str ,p_negotiation_arrangement_segment_id: str):
+    ,p_segment_to_parse: str ,p_start_rec_num: int ,p_end_rec_num: int):
     logger.info('Parsing and breaking down in_network ...')
     l_approx_batch_size = max(p_approx_batch_size ,DEFAULT_BATCH_SIZE )
     seg_record_counts = 0
@@ -60,7 +60,7 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_p
 
     target_table = p_segment_to_parse
     header_id = ''
-    
+    rec_count = -1
     with ZipFile(_snowflake.open(json_fl)) as zf:
         for file in zf.namelist():
             with zf.open(file) as f:
@@ -73,41 +73,53 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_p
                     
                     header_id = f'''{rec['negotiation_arrangement']}::{rec['name']}'''
                     header_id = header_id.upper().replace(' ','_').replace('\t','_')
+                    rec_count += 1
 
-                    if (p_negotiation_arrangement_segment_id.strip() != '') and (header_id != p_negotiation_arrangement_segment_id):
+                    if (rec_count < p_start_rec_num):
                         continue
+                    elif (rec_count > p_end_rec_num):
+                        break
 
                     c_nr = iterate_childobjecttypes_and_save(p_session ,l_approx_batch_size ,p_datafile 
                         ,header_id ,rec[p_segment_to_parse] ,p_segment_to_parse ,target_table)
                     seg_record_counts = seg_record_counts + c_nr
                     
-                    break
-
-    header_id_hash = hash(header_id)    
-    return (seg_record_counts ,header_id_hash)
+    return seg_record_counts
 
 def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str ,p_negotiation_arrangement_segment: str
-    ,p_negotiation_arrangement_segment_id: str):
+    ,p_start_rec_num: int ,p_end_rec_num: int ,p_task_name: str):
     ret = {}
     ret['data_file'] = p_datafile
     ret['negotiation_arrangement_segment'] = p_negotiation_arrangement_segment
-    ret['negotiation_arrangement_id'] = p_negotiation_arrangement_segment_id
+    ret['start_rec_num'] = p_start_rec_num
+    ret['end_rec_num'] = p_end_rec_num
 
     if p_negotiation_arrangement_segment not in ['negotiated_rates' ,'bundled_codes' ,'covered_services']:
         ret['status'] = False
         ret['ERROR_REASON'] = '''allowed values for parameter 'negotiation_arrangement_segment':  'negotiated_rates' ,'bundled_codes' ,'covered_services' '''
         return ret
 
+    start = datetime.datetime.now()
     seg_record_counts ,header_id_hash = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
-        ,p_negotiation_arrangement_segment ,p_negotiation_arrangement_segment_id)
+        ,p_negotiation_arrangement_segment ,p_start_rec_num ,p_end_rec_num)
+    end = datetime.datetime.now()
 
+    elapsed = (end - start)
+    ret['elapsed'] =  elapsed
 
-    task_name = f'tsk_{header_id_hash}'.replace('-','_')
-    sql_stmt = f'alter task if exists {task_name} suspend;'
-    p_session.sql(sql_stmt).collect()
+    # task_name = f'tsk_{header_id_hash}'.replace('-','_')
+    # sql_stmt = f'alter task if exists {p_task_name} suspend;'
+    # p_session.sql(sql_stmt).collect()
 
     ret['ingested_record_counts'] = seg_record_counts
     ret['status'] = True
+
+    ret_str = str(ret)
+    sql_stmt = f'''
+        insert into segment_task_execution_status(task_name ,task_ret_status) values('{p_task_name}' ,'{ret_str}');
+    '''
+    p_session.sql(sql_stmt).collect()
+    
     return ret
 
 ## ---------
