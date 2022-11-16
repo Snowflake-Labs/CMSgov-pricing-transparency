@@ -71,7 +71,7 @@ create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_dag
     ;
 
 create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_dagsuspender(
-    root_task varchar)
+    root_task varchar ,staged_data_flname varchar ,subtask_bucket_count integer)
     returns variant
     language python
     runtime_version = '3.8'
