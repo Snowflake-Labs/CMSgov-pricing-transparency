@@ -16,7 +16,7 @@ def create_root_task_and_fh_loader(p_session: Session ,p_root_task_name: str ,p_
     logger.info(f'Creating the root task ddl ...')
 
     sql_stmts = [
-        f'alter task if exists {p_root_task_name} suspend;'
+        f'alter task if exists {p_root_task_name} suspend;' 
         ,f'''
             create or replace task {p_root_task_name}
                 schedule = 'using cron 30 2 L 6 * UTC'
@@ -58,7 +58,7 @@ def iterate_define_ddl(p_session: Session ,p_root_task_name: str
     max_rec_num = df['REC_NUM'].max()
     l_buckets = max(BUCKETS ,p_buckets) - 4;
     ranges = split_range_into_buckets(max_rec_num ,l_buckets)
-    tm = p_datafile.replace('-','_').replace('.zip','')
+    tm = p_datafile.replace('-','_').replace('.zip','').replace('.json','')
 
     for idx,(m ,n) in enumerate(ranges):
         task_name = f'''T_{tm}_{m}_{n}'''
@@ -105,7 +105,7 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     ret = {}
     ret['data_file'] = p_datafile
 
-    root_task_name = f'''DAG_INNETWORK_LOAD_{p_datafile.replace('-','_').replace('.zip','')}'''
+    root_task_name = f'''DAG_INNETWORK_LOAD_{p_datafile.replace('-','_').replace('.zip','').replace('.json','')}'''
     create_root_task_and_fh_loader(p_session ,root_task_name ,p_stage_path ,p_datafile)
 
     task_def_errors = []

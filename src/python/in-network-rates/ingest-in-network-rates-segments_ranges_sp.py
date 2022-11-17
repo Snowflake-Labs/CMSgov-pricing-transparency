@@ -52,37 +52,46 @@ def iterate_childobjecttypes_and_save(p_session: Session ,p_approx_batch_size: i
     return total_rec_count
 
 def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str ,p_datafile: str 
-    ,p_segment_to_parse: str ,p_start_rec_num: int ,p_end_rec_num: int):
+    ,p_segment_to_parse: str ,p_start_rec_num: int ,p_end_rec_num: int ,f):
     logger.info('Parsing and breaking down in_network ...')
     l_approx_batch_size = max(p_approx_batch_size ,DEFAULT_BATCH_SIZE )
     seg_record_counts = 0
-    json_fl = f'@{p_stage_path}/{p_datafile}'
-
+    
     target_table = p_segment_to_parse
     header_id = ''
     rec_count = -1
-    with ZipFile(_snowflake.open(json_fl)) as zf:
-        for file in zf.namelist():
-            with zf.open(file) as f:
-                
-                for rec in ijson.items(f, 'in_network.item'):
-                    # innetwork_hdr = {x: rec[x] for x in rec if x not in ['negotiated_rates' ,'bundled_codes' ,'covered_services']}
-                    # header_id = f'''{innetwork_hdr['negotiation_arrangement']}::{innetwork_hdr['name']}'''
-                    # innetwork_hdr['header_id'] = header_id.upper().replace(' ','_').replace('\t','_')
-                    # innetwork_hdr['header_id_hash'] = hash(innetwork_hdr['header_id'])
+    for rec in ijson.items(f, 'in_network.item'):
+        header_id = f'''{rec['negotiation_arrangement']}::{rec['name']}'''
+        header_id = header_id.upper().replace(' ','_').replace('\t','_')
+        rec_count += 1
+
+        if (rec_count < p_start_rec_num):
+            continue
+        elif (rec_count > p_end_rec_num):
+            break
+
+        c_nr = iterate_childobjecttypes_and_save(p_session ,l_approx_batch_size ,p_datafile 
+            ,header_id ,rec[p_segment_to_parse] ,p_segment_to_parse ,target_table)
+        seg_record_counts = seg_record_counts + c_nr
                     
-                    header_id = f'''{rec['negotiation_arrangement']}::{rec['name']}'''
-                    header_id = header_id.upper().replace(' ','_').replace('\t','_')
-                    rec_count += 1
+    return seg_record_counts
 
-                    if (rec_count < p_start_rec_num):
-                        continue
-                    elif (rec_count > p_end_rec_num):
-                        break
+def parse_breakdown_save_wrapper(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str ,p_datafile: str 
+    ,p_segment_to_parse: str ,p_start_rec_num: int ,p_end_rec_num: int):
+    logger.info('Parsing and breaking down in_network ...')
+    json_fl = f'@{p_stage_path}/{p_datafile}'
+    seg_record_counts = 0
 
-                    c_nr = iterate_childobjecttypes_and_save(p_session ,l_approx_batch_size ,p_datafile 
-                        ,header_id ,rec[p_segment_to_parse] ,p_segment_to_parse ,target_table)
-                    seg_record_counts = seg_record_counts + c_nr
+    if json_fl.endswith('.json'):
+        with _snowflake.open(json_fl) as f:
+            seg_record_counts = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
+                ,p_segment_to_parse ,p_start_rec_num ,p_end_rec_num ,f)
+    else:
+        with ZipFile(_snowflake.open(json_fl)) as zf:
+            for file in zf.namelist():
+                with zf.open(file) as f:
+                    seg_record_counts = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
+                        ,p_segment_to_parse ,p_start_rec_num ,p_end_rec_num ,f)
                     
     return seg_record_counts
 
@@ -100,7 +109,7 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
         return ret
 
     start = datetime.datetime.now()
-    seg_record_counts  = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
+    seg_record_counts  = parse_breakdown_save_wrapper(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
         ,p_negotiation_arrangement_segment ,p_start_rec_num ,p_end_rec_num)
     end = datetime.datetime.now()
 

@@ -22,27 +22,39 @@ def append_to_table(p_session: Session ,p_df: pd.DataFrame ,p_target_tbl: str):
     
     return tbl_spdf
 
-def parse_file_headers(p_stage_path: str ,p_datafile: str ):
+def parse_file_headers(p_stage_path: str ,p_datafile: str ,f):
     header_event_types = ['string']
     headers = {}
-    json_fl = f'@{p_stage_path}/{p_datafile}'
-    with ZipFile(_snowflake.open(json_fl)) as zf:
-        for file in zf.namelist():
-            with zf.open(file) as f:
-                parser = ijson.parse(f)
-                for prefix, event, value in parser:
-                    if len(prefix) < 3:
-                        continue
-
-                    elif value == None:
-                        continue
-                
-                    elif '.item' in prefix:
-                        continue
-                    
-                    if event in header_event_types:
-                        headers[prefix] = value
     
+    parser = ijson.parse(f)
+    for prefix, event, value in parser:
+        if len(prefix) < 3:
+            continue
+
+        elif value == None:
+            continue
+    
+        elif '.item' in prefix:
+            continue
+        
+        if event in header_event_types:
+            headers[prefix] = value
+    
+    return headers
+
+def parse_file_headers_wrapper(p_stage_path: str ,p_datafile: str ):
+    headers = {}
+    json_fl = f'@{p_stage_path}/{p_datafile}'
+
+    if json_fl.endswith('.json'):
+        with _snowflake.open(json_fl) as f:
+            headers = parse_file_headers_wrapper(p_stage_path ,p_datafile ,f )
+    else:
+        with ZipFile(_snowflake.open(json_fl)) as zf:
+            for file in zf.namelist():
+                with zf.open(file) as f:
+                    headers = parse_file_headers_wrapper(p_stage_path ,p_datafile ,f )
+                
     return headers
 
 def main(p_session: Session ,p_stage_path: str  ,p_datafile: str ):
