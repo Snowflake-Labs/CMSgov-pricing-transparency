@@ -4,78 +4,113 @@
 -- the demo
 -- =========================
 
-create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_ingestor_sp(
-    batch_size integer , stage_path varchar ,staged_data_flname varchar)
-    returns variant
-    language python
-    runtime_version = '3.8'
-    packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
-    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/innetwork_rates_ingestor_sp.py')
-    handler = 'innetwork_rates_ingestor_sp.main'
-    ;
+-- create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_ingestor_sp(
+--     batch_size integer , stage_path varchar ,staged_data_flname varchar)
+--     returns variant
+--     language python
+--     runtime_version = '3.8'
+--     packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
+--     imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/innetwork_rates_ingestor_sp.py')
+--     handler = 'innetwork_rates_ingestor_sp.main'
+--     ;
 
---
+-- --
     
-create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_segheader_ingestor_sp(
-    batch_size integer , stage_path varchar ,staged_data_flname varchar)
+-- create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_segheader_ingestor_sp(
+--     batch_size integer , stage_path varchar ,staged_data_flname varchar)
+--     returns variant
+--     language python
+--     runtime_version = '3.8'
+--     packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
+--     imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-seg-header_sp.py')
+--     handler = 'ingest-in-network-rates-seg-header_sp.main'
+--     ;
+
+-- create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_fileheader_ingestor_sp(
+--     stage_path varchar ,staged_data_flname varchar)
+--     returns variant
+--     language python
+--     runtime_version = '3.8'
+--     packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
+--     imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-file-header_sp.py')
+--     handler = 'ingest-in-network-rates-file-header_sp.main'
+--     ;
+
+-- create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_segments_ingestor_sp(
+--     batch_size integer , stage_path varchar ,staged_data_flname varchar 
+--     ,negotiation_arrangement_segment varchar ,negotiation_arrangement_segment_id varchar)
+--     returns variant
+--     language python
+--     runtime_version = '3.8'
+--     packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
+--     imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-segments_sp.py')
+--     handler = 'ingest-in-network-rates-segments_sp.main'
+--     ;
+
+-- create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_segments_ranges_ingestor_sp(
+--     batch_size integer , stage_path varchar ,staged_data_flname varchar 
+--     ,negotiation_arrangement_segment varchar 
+--     ,start_rec_num integer ,end_rec_num integer ,task_name varchar)
+--     returns variant
+--     language python
+--     runtime_version = '3.8'
+--     packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
+--     imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-segments_ranges_sp.py')
+--     handler = 'ingest-in-network-rates-segments_ranges_sp.main'
+--     ;
+
+
+-- create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_dagbuilder(
+--     batch_size integer ,stage_path varchar ,staged_data_flname varchar ,subtask_bucket_count integer)
+--     returns variant
+--     language python
+--     runtime_version = '3.8'
+--     packages = ('snowflake-snowpark-python' ,'pandas')
+--     imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/in-network-rates-segment-dagbuilder.py')
+--     handler = 'in-network-rates-segment-dagbuilder.main'
+--     ;
+
+-- create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_dagsuspender(
+--     root_task varchar ,staged_data_flname varchar ,subtask_bucket_count integer)
+--     returns variant
+--     language python
+--     runtime_version = '3.8'
+--     packages = ('snowflake-snowpark-python' ,'pandas')
+--     imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/in-network-rates-dag-suspender.py')
+--     handler = 'in-network-rates-dag-suspender.main'
+--     ;
+
+
+--=======================================================
+create or replace procedure innetwork_rates_segheader(
+        batch_size integer , stage_path varchar ,staged_data_flname varchar)
     returns variant
     language python
     runtime_version = '3.8'
     packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
-    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-seg-header_sp.py')
-    handler = 'ingest-in-network-rates-seg-header_sp.main'
+    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-seg-header_sp_v2.py')
+    handler = 'ingest-in-network-rates-seg-header_sp_v2.main'
     ;
 
-create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_fileheader_ingestor_sp(
-    stage_path varchar ,staged_data_flname varchar)
+create or replace procedure innetwork_rates_segments_ingest_sp(
+        batch_size integer ,stage_path varchar ,staged_data_flname varchar
+        ,negotiation_arrangement_segment_type varchar 
+        ,current_task_name varchar)
     returns variant
     language python
     runtime_version = '3.8'
     packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
-    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-file-header_sp.py')
-    handler = 'ingest-in-network-rates-file-header_sp.main'
+    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-segment-lists_sp.py')
+    handler = 'ingest-in-network-rates-segment-lists_sp.main'
     ;
 
-create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_segments_ingestor_sp(
-    batch_size integer , stage_path varchar ,staged_data_flname varchar 
-    ,negotiation_arrangement_segment varchar ,negotiation_arrangement_segment_id varchar)
+create or replace procedure innetwork_rates_dagbuilder_v2(
+        batch_size integer ,stage_path varchar ,staged_data_flname varchar
+        ,parallels number ,execution_warehouse varchar ,force_rerun boolean)
     returns variant
     language python
     runtime_version = '3.8'
     packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
-    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-segments_sp.py')
-    handler = 'ingest-in-network-rates-segments_sp.main'
-    ;
-
-create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_segments_ranges_ingestor_sp(
-    batch_size integer , stage_path varchar ,staged_data_flname varchar 
-    ,negotiation_arrangement_segment varchar 
-    ,start_rec_num integer ,end_rec_num integer ,task_name varchar)
-    returns variant
-    language python
-    runtime_version = '3.8'
-    packages = ('snowflake-snowpark-python' ,'pandas', 'ijson')
-    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/ingest-in-network-rates-segments_ranges_sp.py')
-    handler = 'ingest-in-network-rates-segments_ranges_sp.main'
-    ;
-
-
-create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_dagbuilder(
-    batch_size integer ,stage_path varchar ,staged_data_flname varchar ,subtask_bucket_count integer)
-    returns variant
-    language python
-    runtime_version = '3.8'
-    packages = ('snowflake-snowpark-python' ,'pandas')
-    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/in-network-rates-segment-dagbuilder.py')
-    handler = 'in-network-rates-segment-dagbuilder.main'
-    ;
-
-create or replace procedure sflk_pricing_transperancy.public.innetwork_rates_dagsuspender(
-    root_task varchar ,staged_data_flname varchar ,subtask_bucket_count integer)
-    returns variant
-    language python
-    runtime_version = '3.8'
-    packages = ('snowflake-snowpark-python' ,'pandas')
-    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/in-network-rates-dag-suspender.py')
-    handler = 'in-network-rates-dag-suspender.main'
+    imports = ('@sflk_pricing_transperancy.public.lib_stg/scripts/in-network-rates-segment-dagbuilder-v2.py')
+    handler = 'in-network-rates-segment-dagbuilder-v2.main'
     ;

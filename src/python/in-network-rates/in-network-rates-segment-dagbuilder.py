@@ -7,7 +7,6 @@ import random
 import string
 
 logger = logging.getLogger("innetwork_rates_segment_dagbuilder_sp")
-
 BUCKETS = 50
 BATCH_SIZE = 5000
 IN_NETWORK_RATES_SEGHDR_TBL = 'in_network_rates_segment_header'
