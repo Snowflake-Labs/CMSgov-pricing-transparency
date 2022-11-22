@@ -50,40 +50,56 @@ def append_to_table(p_session: Session ,p_df: pd.DataFrame ,p_target_tbl: str):
 
     return merged_df
 
-def split_range_into_buckets(p_range_max, p_num_buckets):
-    step = p_range_max / p_num_buckets
-    return [(round(step*i), round(step*(i+1))) for i in range(p_num_buckets)]
+def fold_and_balance(p_df: pd.DataFrame ,p_target_df_len: int):
+    df = p_df
+    df.sort_values('NEGOTIATED_RATES_COUNT' ,inplace=True ,ascending=False)
+
+    for i in range((len(p_df)%2)):
+        data = [['DUMMY', 0]]
+        tail_df = pd.DataFrame(data, columns=['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT'])
+        df = pd.concat([df ,tail_df])
+
+    middle = int( len(df)/2 )
+    df_t = df.iloc[:middle].copy(deep=True)
+    df_b = df.iloc[-1*middle:].copy(deep=True)
+    df_b.sort_values('NEGOTIATED_RATES_COUNT' ,inplace=True ,ascending=True)
+
+    data = []
+    for i in range(len(df_t)):
+        seg_ids = ','.join([
+            df_t.iloc[i,0]
+            ,df_b.iloc[i,0]
+        ])
+        nr_count = df_t.iloc[i,1] + df_b.iloc[i,1]
+        data.append( (seg_ids ,nr_count) )
+
+    d_df = pd.DataFrame(data, columns =['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT'])
+
+    check_len = len(d_df) > p_target_df_len
+    mn = d_df.NEGOTIATED_RATES_COUNT.mean()
+    print(f'check len : {check_len} : {len(d_df)} : {p_target_df_len} : {(p_target_df_len - len(d_df))} : {mn} ')
+    
+    if(len(d_df) > p_target_df_len):
+        return fold_and_balance(d_df ,p_target_df_len)
+    
+    elif (p_target_df_len - len(d_df)) > 3:
+        return p_df
+
+    return d_df
 
 def segments_count_balance(p_session: Session ,p_datafile: str ,p_parallels: int):
     logger.info(f'Mapping tasks to segments parallel: {p_parallels} datafile {p_datafile}')
 
     # Get the negotiated arrangements segments to negotiated_rates_count
     sql_stmt = f'''
-        select ROW_NUMBER() OVER( order by segment_id asc) as seq_no
-            ,segment_id, negotiated_rates_count
+        select segment_id, negotiated_rates_count
         from in_network_rates_segment_header_V2
-        where data_file = '{p_datafile}'
-        order by seq_no
     '''
     i_df = p_session.sql(sql_stmt).to_pandas()
+    i_df.columns = ['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT']
+    x_df = fold_and_balance(i_df ,p_parallels)
 
-    max_rec_num = len(i_df)
-    ranges = split_range_into_buckets(max_rec_num ,p_parallels)
-
-    o_df_rows = []
-    for idx,(start_idx ,end_idx) in enumerate(ranges):
-        sub_df = i_df.iloc[start_idx:end_idx,]
-        segment_ids = []
-        nr_c = -1
-        for index, row in sub_df.iterrows():
-            segment_ids.append(row['SEGMENT_ID'])
-            nr_c += row['NEGOTIATED_RATES_COUNT']
-
-        o_df_rows.append( (','.join(segment_ids) ,nr_c) )
-        o_df = pd.DataFrame(o_df_rows
-        ,columns=['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT'])
-
-    return o_df
+    return x_df
 
 def save_tasks_to_segments(p_session: Session ,p_datafile: str ,p_df :pd.DataFrame ,p_force_rerun: bool):
     logger.info('Saving tasks to segment')
@@ -145,16 +161,16 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
     ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str
     ,p_warehouse: str ,p_task_lists:List[str] ,task_matrix_shape):
     logger.info(f'Creating the task ddl ...')
-    line_end_tasks = []
-    
+
     idx = 0
+    line_end_tasks = []
     for m in range(task_matrix_shape[0]):
         preceding_task = p_root_task_name
         end_task_name = ''
 
         for n in range(task_matrix_shape[1]):
             task_name = p_task_lists[idx]
-            
+
             sql_stmts = [
                 f'''
                     create or replace task {task_name}
@@ -187,7 +203,7 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
     #         f'''
     #             create or replace task {task_name}
     #             warehouse = {p_warehouse}
-    #             schedule = 'using cron 30 2 L 6 * UTC'
+    #             after {p_root_task_name}
     #             as
     #             begin
     #                 call innetwork_rates_segments_ingest_sp(
@@ -199,22 +215,20 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
     #             end;
     #         '''
     #         ,f''' alter task if exists  {task_name} resume; '''
-    #         ,f''' execute task {task_name}; '''
     #     ]
     #     for stmt in sql_stmts:
     #         p_session.sql(stmt).collect()
-    #     line_end_tasks.append(task_name)
 
     return line_end_tasks
 
 def create_term_tasks(p_session: Session ,p_datafile: str
-    ,p_warehouse: str ,p_root_task_name: str  ,p_line_end_task_lists:List[str] ,p_task_lists:List[str]):
+    ,p_warehouse: str ,p_root_task_name: str  ,p_task_lists:List[str]):
     logger.info(f'Creating the task ddl ...')
 
     m = get_md5of_datafile(p_datafile)
     term_task_name = f'TERM_tsk_{m}'
     
-    after_tasks_phrase = ','.join(p_line_end_task_lists)
+    after_tasks_phrase = ','.join(p_task_lists)
     task_stmts = []
     for task_name in p_task_lists:
         task_stmts.append(f''' alter task if exists  {task_name} suspend; ''')
@@ -230,13 +244,13 @@ def create_term_tasks(p_session: Session ,p_datafile: str
                     begin
                         {task_stmts_str}
 
-                        -- drop task if exists {p_root_task_name};
+                        drop task if exists {p_root_task_name};
 
                         insert into segment_task_execution_status( data_file  ,task_name) 
                             values('{p_datafile}' ,'{term_task_name}');
                     end;
             '''
-            ,f''' alter task if exists {term_task_name} resume; '''
+            ,f''' alter task if exists  {term_task_name} resume; '''
     ]
     for stmt in sql_stmts:
         p_session.sql(stmt).collect()
@@ -282,60 +296,58 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     line_end_tasks = create_subtasks(p_session ,root_task_name ,p_approx_batch_size ,p_stage_path ,p_datafile ,p_warehouse ,task_list ,task_matrix_shape)
 
     # create term task
-    term_task = create_term_tasks(p_session ,p_datafile ,p_warehouse ,root_task_name ,line_end_tasks ,task_list)
+    create_term_tasks(p_session ,p_datafile ,p_warehouse ,root_task_name ,line_end_tasks)
     
     ret['status'] = True
     return ret
 
 
 
-# def fold_and_balance(p_df: pd.DataFrame ,p_target_df_len: int):
-#     df = p_df
-#     df.sort_values('NEGOTIATED_RATES_COUNT' ,inplace=True ,ascending=False)
-
-#     for i in range((len(p_df)%2)):
-#         data = [['DUMMY', 0]]
-#         tail_df = pd.DataFrame(data, columns=['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT'])
-#         df = pd.concat([df ,tail_df])
-
-#     middle = int( len(df)/2 )
-#     df_t = df.iloc[:middle].copy(deep=True)
-#     df_b = df.iloc[-1*middle:].copy(deep=True)
-#     df_b.sort_values('NEGOTIATED_RATES_COUNT' ,inplace=True ,ascending=True)
-
-#     data = []
-#     for i in range(len(df_t)):
-#         seg_ids = ','.join([
-#             df_t.iloc[i,0]
-#             ,df_b.iloc[i,0]
-#         ])
-#         nr_count = df_t.iloc[i,1] + df_b.iloc[i,1]
-#         data.append( (seg_ids ,nr_count) )
-
-#     d_df = pd.DataFrame(data, columns =['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT'])
-
-#     check_len = len(d_df) > p_target_df_len
-#     mn = d_df.NEGOTIATED_RATES_COUNT.mean()
-#     print(f'check len : {check_len} : {len(d_df)} : {p_target_df_len} : {(p_target_df_len - len(d_df))} : {mn} ')
+# CREATE or replace task tsk_task_root
+#     warehouse = dev_pctransperancy_demo_wh
+#     schedule = 'using cron 30 2 L 6 * UTC'
+#     AS
+#     begin
+#        -- truncate table dag;
+#         insert into dag(task_name) values('exp_task_root');
+#     end;
     
-#     if(len(d_df) > p_target_df_len):
-#         return fold_and_balance(d_df ,p_target_df_len)
-    
-#     elif (p_target_df_len - len(d_df)) > 3:
-#         return p_df
+# create or replace task tsk_1
+#     warehouse = dev_pctransperancy_demo_wh
+#     after tsk_task_root
+#     as
+#     begin
+#         insert into dag(task_name) values('tsk_1');
+#         alter task if exists  tsk_1 suspend;
+#     end;
+        
+# create or replace task tsk_2
+#     warehouse = dev_pctransperancy_demo_wh
+#     after tsk_task_root
+#     as
+#     begin
+#         insert into dag(task_name) values('tsk_2');
+#         alter task if exists  tsk_2 suspend;
+#     end;
 
-#     return d_df
+# create or replace task tsk_term
+#     warehouse = dev_pctransperancy_demo_wh
+#     after tsk_1 ,tsk_2
+#     as
+#     begin
+#         alter task if exists  tsk_1 suspend;
+#         alter task if exists  tsk_2 suspend;
+#         alter task if exists  tsk_task_root suspend;
+#         drop task if exists  tsk_1;
+#         drop task if exists  tsk_2;
+#         drop task if exists  tsk_task_root;
+#         insert into dag(task_name) values('tsk_term');
+#     end;
 
-# def segments_count_balance(p_session: Session ,p_datafile: str ,p_parallels: int):
-#     logger.info(f'Mapping tasks to segments parallel: {p_parallels} datafile {p_datafile}')
 
-#     # Get the negotiated arrangements segments to negotiated_rates_count
-#     sql_stmt = f'''
-#         select segment_id, negotiated_rates_count
-#         from in_network_rates_segment_header_V2
-#     '''
-#     i_df = p_session.sql(sql_stmt).to_pandas()
-#     i_df.columns = ['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT']
-#     x_df = fold_and_balance(i_df ,p_parallels)
+# alter task if exists  tsk_1 resume;
+# alter task if exists  tsk_2 resume;
+# alter task if exists  tsk_term resume;
+# -- alter task if exists  exp_task_root resume;
 
-#     return x_df
+# execute task tsk_task_root;
