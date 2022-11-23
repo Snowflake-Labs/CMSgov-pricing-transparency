@@ -1,6 +1,7 @@
 import sys ,os ,io ,json ,logging
 import hashlib
 import pandas as pd
+import numpy as np
 import ijson
 from snowflake.snowpark.session import Session
 import snowflake.snowpark.functions as F
@@ -31,8 +32,11 @@ def append_to_table(p_session: Session ,p_df: pd.DataFrame ,p_target_tbl: str):
     #ref: https://docs.snowflake.com/ko/developer-guide/snowpark/reference/python/_autosummary/snowflake.snowpark.html#snowflake.snowpark.Session.write_pandas
 
     logger.info(f'Appending batch to table [{p_target_tbl}] ...')
-    # tbl_spdf = p_session.write_pandas(p_df ,table_name=p_target_tbl 
-    #     ,quote_identifiers=False ,auto_create_table=True ,overwrite = False ,table_type='transient')
+    tbl_spdf = p_session.write_pandas(p_df ,table_name=p_target_tbl 
+        ,quote_identifiers=False ,auto_create_table=True ,overwrite = False ,table_type='transient')
+
+    if(1==1):
+        return tbl_spdf
     
     # Convert the data frame into Snowpark dataframe, needed for merge operation
     sp_df = get_snowpark_dataframe(p_session ,p_df)
@@ -55,15 +59,51 @@ def append_to_table(p_session: Session ,p_df: pd.DataFrame ,p_target_tbl: str):
 
     return merged_df
 
-def iterate_childobjecttypes_and_save(p_session: Session ,p_approx_batch_size: int ,p_datafile: str 
+def save_segments(p_session: Session ,p_approx_batch_size: int ,p_datafile: str 
     ,p_segment_id: str ,p_sub_records: list ,p_segment_type: str) -> int:
 
     batch_records = []
     total_rec_count = len(p_sub_records)
 
+    splits = np.array_split(p_sub_records, 50)
+
+    for idx, split in enumerate(splits):
+        sub_records_strlist = [str(r) for r in split]
+        sub_records_str = '[' + ','.join(sub_records_strlist) + ']'
+
+        #data_hash = hashlib.md5(sub_records_str.encode()).hexdigest()
+        v = f'{p_segment_id}::{idx}'
+        data_hash = hashlib.md5(v.encode()).hexdigest()
+
+        curr_rec = {}
+        curr_rec['seq_no'] = idx
+        curr_rec['data_file'] = p_datafile
+        curr_rec['segment_id'] = p_segment_id
+        curr_rec['segment_type'] = p_segment_type
+        curr_rec['segment_data'] = sub_records_str
+        curr_rec['data_hash'] =  data_hash
+
+        batch_records.append(curr_rec)
+        
+        # buffer_count = len(batch_records)
+
+    # if buffer_count >= p_approx_batch_size:
+    df = pd.DataFrame(batch_records)
+    append_to_table(p_session ,df  ,TARGET_TABLE)
+    batch_records.clear()
+
+    return total_rec_count
+
+def iterate_childobjecttypes_and_save(p_session: Session ,p_approx_batch_size: int ,p_datafile: str 
+    ,p_segment_id: str ,p_sub_records: list ,p_segment_type: str ,p_segments_buffer: list) -> int:
+
+    # batch_records = []
+    total_rec_count = len(p_sub_records)
+
     logger.info(f'Parsing and saving child records [{p_segment_type}] len: {total_rec_count} ...')
     for idx ,r in enumerate(p_sub_records):
-        data_hash = f'''{p_segment_type}::{str(r)}'''
+        rec_str = str(r)
+        data_hash = f'''{p_segment_id}::{p_segment_type}::{rec_str}'''
         data_hash = hashlib.md5(data_hash.encode()).hexdigest()
 
         curr_rec = {}
@@ -71,20 +111,21 @@ def iterate_childobjecttypes_and_save(p_session: Session ,p_approx_batch_size: i
         curr_rec['data_file'] = p_datafile
         curr_rec['segment_id'] = p_segment_id
         curr_rec['segment_type'] = p_segment_type
-        curr_rec['segment_data'] = str(r)
+        curr_rec['segment_data'] = rec_str
         curr_rec['data_hash'] =  data_hash
-        batch_records.append(curr_rec)
+        p_segments_buffer.append(curr_rec)
 
-        if len(batch_records) >= p_approx_batch_size:
-            df = pd.DataFrame(batch_records)
-            append_to_table(p_session ,df  ,TARGET_TABLE)
-            batch_records.clear()
+        # if len(batch_records) >= p_approx_batch_size:
+        #     df = pd.DataFrame(batch_records)
+        #     append_to_table(p_session ,df  ,TARGET_TABLE)
+        #     batch_records.clear()
 
     # append leftovers
-    if len(batch_records) > 0:
-        df = pd.DataFrame(batch_records)
-        append_to_table(p_session ,df  ,TARGET_TABLE)
-        batch_records.clear()
+    # if len(batch_records) > 0:
+    # if len(p_segments_buffer) >= p_approx_batch_size:
+    #     df = pd.DataFrame(p_segments_buffer)
+    #     append_to_table(p_session ,df  ,TARGET_TABLE)
+    #     p_segments_buffer.clear()
 
     return total_rec_count
 
@@ -93,10 +134,10 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_datafil
     logger.info('Parsing and breaking down in_network ...')
     l_approx_batch_size = max(p_approx_batch_size ,DEFAULT_BATCH_SIZE )
     seg_record_counts = 0
-    
-    # segment_ids_set = set(p_negotiation_arrangement_segment_ids.split(','))
+    segments_buffer = []
     segment_name_to_ids_map = build_segment_ids_map(p_session ,p_datafile  ,p_task_name)
-
+    captured_segments = []
+    
     for rec in ijson.items(f, 'in_network.item'):
         
         if rec['name'] not in segment_name_to_ids_map:
@@ -105,16 +146,25 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_datafil
         segment_id = segment_name_to_ids_map[rec['name']]
 
         c_nr = iterate_childobjecttypes_and_save(p_session ,l_approx_batch_size ,p_datafile 
-            ,segment_id ,rec[p_segment_type] ,p_segment_type)
+            ,segment_id ,rec[p_segment_type] ,p_segment_type ,segments_buffer)
+
+        # c_nr = save_segments(p_session ,l_approx_batch_size ,p_datafile 
+        #     ,segment_id ,rec[p_segment_type] ,p_segment_type)
+
         seg_record_counts = seg_record_counts + c_nr
         
         # We dont to scan to the end of the files, if the segments that were asked for
         # has been parsed. Hence we keep a tab of what has not been parsed
-        del segment_name_to_ids_map[rec['name']]
-        
+        captured_segments.append(rec['name'])
+
         # break loop only after all the segments were parsed
-        if(len(segment_name_to_ids_map) <= 0):
+        if len(captured_segments) == len(segment_name_to_ids_map):
             break
+        
+    #ensure to write all records from the buffer to the table
+    if len(segments_buffer) > 0:
+        df = pd.DataFrame(segments_buffer)
+        append_to_table(p_session ,df  ,TARGET_TABLE)
 
     return seg_record_counts
 
@@ -165,6 +215,7 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     ,p_task_name: str):
     ret = {}
     seg_record_counts = 0
+    status = False
 
     ret['data_file'] = p_datafile
     ret['task_name'] = p_task_name
@@ -172,20 +223,30 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     
     if p_negotiation_arrangement_segment_type not in ['negotiated_rates' ,'bundled_codes' ,'covered_services']:
         ret['status'] = False
-        ret['ERROR_REASON'] = '''allowed values for parameter 'p_negotiation_arrangement_segment_type':  'negotiated_rates' ,'bundled_codes' ,'covered_services' '''
-        return ret
+        ret['EXCEPTION'] = '''allowed values for parameter 'p_negotiation_arrangement_segment_type':  'negotiated_rates' ,'bundled_codes' ,'covered_services' '''
+        raise Exception(ret['EXCEPTION'])
 
     start_time = time.time()
-    seg_record_counts = parse_breakdown_save_wrapper(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
-        ,p_negotiation_arrangement_segment_type ,p_task_name)
-    ret['ingested_record_counts'] = seg_record_counts
+    try:
+        seg_record_counts = parse_breakdown_save_wrapper(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile 
+            ,p_negotiation_arrangement_segment_type ,p_task_name)
+        ret['ingested_record_counts'] = seg_record_counts
+        status = True
+    except Exception as e:
+        status = False
+        ex_str = str(e)
+        ret['EXCEPTION'] = ex_str
+        logger.error('Segment ingestion failed: '+ ex_str)
+    
     end_time = time.time()
-
     elapsed_time = end_time - start_time
     elapsed = str(timedelta(seconds=elapsed_time))
     ret['elapsed'] =  elapsed
-    
+
     insert_execution_status(p_session ,p_datafile ,p_task_name ,elapsed ,ret)
+
+    if(status == False):
+        raise Exception(ret['EXCEPTION'])
     
-    ret['status'] = True
+    ret['status'] = status
     return ret
