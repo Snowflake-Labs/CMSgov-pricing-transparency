@@ -122,10 +122,10 @@ def iterate_childobjecttypes_and_save(p_session: Session ,p_approx_batch_size: i
 
     # append leftovers
     # if len(batch_records) > 0:
-    # if len(p_segments_buffer) >= p_approx_batch_size:
-    #     df = pd.DataFrame(p_segments_buffer)
-    #     append_to_table(p_session ,df  ,TARGET_TABLE)
-    #     p_segments_buffer.clear()
+    if len(p_segments_buffer) >= p_approx_batch_size:
+        df = pd.DataFrame(p_segments_buffer)
+        append_to_table(p_session ,df  ,TARGET_TABLE)
+        p_segments_buffer.clear()
 
     return total_rec_count
 
@@ -164,7 +164,7 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int ,p_datafil
     #ensure to write all records from the buffer to the table
     if len(segments_buffer) > 0:
         df = pd.DataFrame(segments_buffer)
-        append_to_table(p_session ,df  ,TARGET_TABLE)
+        append_to_table(p_session ,df ,TARGET_TABLE)
 
     return seg_record_counts
 

@@ -119,8 +119,11 @@ def save_tasks_to_segments(p_session: Session ,p_datafile: str ,p_df :pd.DataFra
 def get_md5of_datafile(p_datafile: str):
     return hashlib.md5(p_datafile.encode()).hexdigest()
 
-def create_root_task_and_fh_loader(p_session: Session ,p_root_task_name: str ,p_datafile: str ,p_warehouse: str): 
+def create_root_task_and_fh_loader(p_session: Session ,p_root_task_name: str ,p_stage_path: str ,p_datafile: str ,p_warehouse: str): 
     logger.info(f'Creating the root task {p_root_task_name} ddl ...')
+
+    m = get_md5of_datafile(p_datafile)
+    fh_task_name = f'tsk_fh_{m}'
 
     sql_stmts = [
         f'alter task if exists {p_root_task_name} suspend;' 
@@ -131,15 +134,24 @@ def create_root_task_and_fh_loader(p_session: Session ,p_root_task_name: str ,p_
                 comment = 'DAG to load data for file: {p_datafile}'
                 as
                 begin
-                    select current_timestamp;
-
                     insert into segment_task_execution_status( data_file  ,task_name) 
                         values('{p_datafile}' ,'{p_root_task_name}');
                 end;
         '''
+        # ,f'''
+        # create or replace task fh_{fh_task_name}
+        #     warehouse = {p_warehouse}
+        #     comment = 'file header data ingestor for file: {p_datafile}'
+        #     after {p_root_task_name} 
+        #     as 
+        #     call innetwork_rates_fileheader_ingestor_sp('{p_stage_path}','{p_datafile}');
+        # '''
+        # ,f'alter task if exists fh_{p_root_task_name} resume;'
     ]
     for stmt in sql_stmts:
         p_session.sql(stmt).collect()
+
+    return p_root_task_name ,fh_task_name
 
 def create_subtasks(p_session: Session ,p_root_task_name: str 
     ,p_approx_batch_size: int ,p_stage_path: str  ,p_datafile: str
@@ -155,10 +167,13 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
         for n in range(task_matrix_shape[1]):
             task_name = p_task_lists[idx]
             
+            # 86400000 => 1 day
+            # 3600000 => 1 hour
             sql_stmts = [
                 f'''
                     create or replace task {task_name}
                     warehouse = {p_warehouse}
+                    user_task_timeout_ms = 86400000
                     after {preceding_task}
                     as
                     begin
@@ -272,7 +287,7 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     root_task_name = f'''DAG_ROOT_{root_task_name}'''
 
     # create root task
-    create_root_task_and_fh_loader(p_session ,root_task_name ,p_datafile ,p_warehouse)
+    rt_task, fh_task_name = create_root_task_and_fh_loader(p_session ,root_task_name ,p_stage_path ,p_datafile ,p_warehouse)
 
     # create sub tasks and add to root task
     task_list = list(task_to_segments_df.ASSIGNED_TASK_NAME.values)
@@ -280,62 +295,10 @@ def main(p_session: Session ,p_approx_batch_size: int ,p_stage_path: str  ,p_dat
     ret['task_matrix_shape'] = task_matrix_shape
     
     line_end_tasks = create_subtasks(p_session ,root_task_name ,p_approx_batch_size ,p_stage_path ,p_datafile ,p_warehouse ,task_list ,task_matrix_shape)
+    # line_end_tasks.append(fh_task_name)
 
     # create term task
     term_task = create_term_tasks(p_session ,p_datafile ,p_warehouse ,root_task_name ,line_end_tasks ,task_list)
     
     ret['status'] = True
     return ret
-
-
-
-# def fold_and_balance(p_df: pd.DataFrame ,p_target_df_len: int):
-#     df = p_df
-#     df.sort_values('NEGOTIATED_RATES_COUNT' ,inplace=True ,ascending=False)
-
-#     for i in range((len(p_df)%2)):
-#         data = [['DUMMY', 0]]
-#         tail_df = pd.DataFrame(data, columns=['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT'])
-#         df = pd.concat([df ,tail_df])
-
-#     middle = int( len(df)/2 )
-#     df_t = df.iloc[:middle].copy(deep=True)
-#     df_b = df.iloc[-1*middle:].copy(deep=True)
-#     df_b.sort_values('NEGOTIATED_RATES_COUNT' ,inplace=True ,ascending=True)
-
-#     data = []
-#     for i in range(len(df_t)):
-#         seg_ids = ','.join([
-#             df_t.iloc[i,0]
-#             ,df_b.iloc[i,0]
-#         ])
-#         nr_count = df_t.iloc[i,1] + df_b.iloc[i,1]
-#         data.append( (seg_ids ,nr_count) )
-
-#     d_df = pd.DataFrame(data, columns =['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT'])
-
-#     check_len = len(d_df) > p_target_df_len
-#     mn = d_df.NEGOTIATED_RATES_COUNT.mean()
-#     print(f'check len : {check_len} : {len(d_df)} : {p_target_df_len} : {(p_target_df_len - len(d_df))} : {mn} ')
-    
-#     if(len(d_df) > p_target_df_len):
-#         return fold_and_balance(d_df ,p_target_df_len)
-    
-#     elif (p_target_df_len - len(d_df)) > 3:
-#         return p_df
-
-#     return d_df
-
-# def segments_count_balance(p_session: Session ,p_datafile: str ,p_parallels: int):
-#     logger.info(f'Mapping tasks to segments parallel: {p_parallels} datafile {p_datafile}')
-
-#     # Get the negotiated arrangements segments to negotiated_rates_count
-#     sql_stmt = f'''
-#         select segment_id, negotiated_rates_count
-#         from in_network_rates_segment_header_V2
-#     '''
-#     i_df = p_session.sql(sql_stmt).to_pandas()
-#     i_df.columns = ['SEGMENT_IDS', 'NEGOTIATED_RATES_COUNT']
-#     x_df = fold_and_balance(i_df ,p_parallels)
-
-#     return x_df
