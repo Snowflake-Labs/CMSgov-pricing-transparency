@@ -5,7 +5,3 @@ notebook
 jinja2
 jinjasql
 iplantuml
-
-tensorflow
-scikit-learn
-opencv-python
