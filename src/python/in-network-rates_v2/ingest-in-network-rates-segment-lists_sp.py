@@ -1,5 +1,5 @@
 import sys ,os ,io ,json ,logging
-import hashlib
+import hashlib ,gzip
 import pandas as pd
 import numpy as np
 import ijson
@@ -177,6 +177,12 @@ def parse_breakdown_save_wrapper(p_session: Session ,p_approx_batch_size: int ,p
         with _snowflake.open(json_fl) as f:
             return parse_breakdown_save(p_session ,p_approx_batch_size ,p_datafile 
         ,p_segment_type ,p_task_name ,f)
+
+    elif json_fl.endswith('.gz'):
+        with gzip.open(_snowflake.open(json_fl),'r') as f:
+            return parse_breakdown_save(p_session ,p_approx_batch_size ,p_datafile 
+        ,p_segment_type ,p_task_name ,f) 
+
     else:
         with ZipFile(_snowflake.open(json_fl)) as zf:
             for file in zf.namelist():

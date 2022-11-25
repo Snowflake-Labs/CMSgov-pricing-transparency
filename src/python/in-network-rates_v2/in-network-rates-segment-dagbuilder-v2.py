@@ -52,7 +52,9 @@ def append_to_table(p_session: Session ,p_df: pd.DataFrame ,p_target_tbl: str):
 
 def split_range_into_buckets(p_range_max, p_num_buckets):
     step = p_range_max / p_num_buckets
-    return [(round(step*i), round(step*(i+1))) for i in range(p_num_buckets)]
+    return [(
+        round(step*i)+1 if i >= 1 else 0
+        ,round(step*(i+1))) for i in range(p_num_buckets)]
 
 def segments_count_balance(p_session: Session ,p_datafile: str ,p_parallels: int):
     logger.info(f'Mapping tasks to segments parallel: {p_parallels} datafile {p_datafile}')

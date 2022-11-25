@@ -1,5 +1,5 @@
 import sys ,os ,io ,json ,logging ,re
-import uuid
+import uuid ,gzip
 from zipfile import ZipFile
 import pandas as pd
 import ijson
@@ -109,6 +109,11 @@ def parse_breakdown_save_wrapper(p_session: Session ,p_approx_batch_size: int ,p
     if json_fl.endswith('.json'):
         with _snowflake.open(json_fl) as f:
             rec_count = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile ,f)
+
+    elif json_fl.endswith('.gz'):
+        with gzip.open(_snowflake.open(json_fl),'r') as f:
+            rec_count = parse_breakdown_save(p_session ,p_approx_batch_size ,p_stage_path ,p_datafile ,f)      
+
     else:
         with ZipFile(_snowflake.open(json_fl)) as zf:
             for file in zf.namelist():
