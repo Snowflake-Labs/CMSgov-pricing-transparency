@@ -32,11 +32,11 @@ def append_to_table(p_session: Session ,p_df: pd.DataFrame ,p_target_tbl: str):
     #ref: https://docs.snowflake.com/ko/developer-guide/snowpark/reference/python/_autosummary/snowflake.snowpark.html#snowflake.snowpark.Session.write_pandas
 
     logger.info(f'Appending batch to table [{p_target_tbl}] ...')
-    tbl_spdf = p_session.write_pandas(p_df ,table_name=p_target_tbl 
-        ,quote_identifiers=False ,auto_create_table=True ,overwrite = False ,table_type='transient')
+    # tbl_spdf = p_session.write_pandas(p_df ,table_name=p_target_tbl 
+    #     ,quote_identifiers=False ,auto_create_table=True ,overwrite = False ,table_type='transient')
 
-    if(1==1):
-        return tbl_spdf
+    # if(1==1):
+    #     return tbl_spdf
     
     # Convert the data frame into Snowpark dataframe, needed for merge operation
     sp_df = get_snowpark_dataframe(p_session ,p_df)
