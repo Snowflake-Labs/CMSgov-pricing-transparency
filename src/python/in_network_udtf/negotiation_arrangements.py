@@ -23,7 +23,7 @@ def get_basename_of_datafile(p_datafile:str) -> str:
     return fl_base[0]
 
 def upload_segments_file_to_stage(p_session: Session ,p_local_dir: str ,p_target_stage: str ,p_stage_dir: str):
-    logger.info(f" Uploading library to stage: {p_target_stage}/{p_stage_dir} ... ")
+    logger.info(f" Uploading data to stage: {p_target_stage}/{p_stage_dir} ... ")
 
     for path, currentDirectory, files in os.walk(p_local_dir):
         for file in files:
@@ -56,6 +56,7 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int
     datafl_basename = get_basename_of_datafile(p_datafile)
     out_folder = os.path.join('/tmp', datafl_basename)
    
+    eof_reached = True
     files_written = -1
     seq_no = -1
     for rec in ijson.items(f, 'in_network.item' ,use_float=True):
@@ -63,7 +64,8 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int
 
         if seq_no < p_from_seg:
             continue
-        elif (seq_no > p_to_seg):
+        elif (seq_no > p_to_seg + 2):
+            eof_reached = False
             break
 
         innetwork_hdr = rec.copy()
@@ -122,25 +124,26 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int
     upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename)
     # shutil.rmtree(out_folder)
     # p_session.sql(f'alter stage {p_target_stage} refresh; ').collect()
-    return seq_no
+    return (seq_no ,eof_reached)
 
 def parse_breakdown_save_wrapper(p_session: Session ,p_approx_batch_size: int 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
     ,p_from_seg: int ,p_to_seg: int ):
     logger.info('Parsing and breaking down in_network ...')
     rec_count = -1
+    eof_reached = True
     json_fl = f'@{p_stage_path}/{p_datafile}'
 
     rdata = ''
     if json_fl.endswith('.json'):
         with _snowflake.open(json_fl) as f:
-            rec_count = parse_breakdown_save(p_session ,p_approx_batch_size 
+            rec_count ,eof_reached = parse_breakdown_save(p_session ,p_approx_batch_size 
                 ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)
 
     elif json_fl.endswith('.gz'):
         with gzip.open(_snowflake.open(json_fl),'r') as f:
-            rec_count = parse_breakdown_save(p_session ,p_approx_batch_size 
+            rec_count ,eof_reached = parse_breakdown_save(p_session ,p_approx_batch_size 
                 ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)   
 
@@ -148,11 +151,11 @@ def parse_breakdown_save_wrapper(p_session: Session ,p_approx_batch_size: int
         with ZipFile(_snowflake.open(json_fl)) as zf:
             for file in zf.namelist():
                 with zf.open(file) as f:
-                    rec_count = parse_breakdown_save(p_session ,p_approx_batch_size 
+                    rec_count ,eof_reached = parse_breakdown_save(p_session ,p_approx_batch_size 
                         ,p_stage_path ,p_datafile ,p_target_stage 
                         ,p_from_seg ,p_to_seg ,f)
     
-    return rec_count
+    return rec_count ,eof_reached
 
 def main(p_session: Session ,p_approx_batch_size: int 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
@@ -165,7 +168,7 @@ def main(p_session: Session ,p_approx_batch_size: int
 
     start = datetime.datetime.now()
     
-    seg_record_counts = parse_breakdown_save_wrapper(p_session ,p_approx_batch_size 
+    seg_record_counts ,eof_reached = parse_breakdown_save_wrapper(p_session ,p_approx_batch_size 
         ,p_stage_path ,p_datafile ,p_target_stage
         ,p_from_seg ,p_to_seg)
     end = datetime.datetime.now()
@@ -173,6 +176,7 @@ def main(p_session: Session ,p_approx_batch_size: int
     elapsed = (end - start)
     ret['elapsed'] =  f'=> {elapsed} '
     ret['ingested_record_counts'] = seg_record_counts
+    ret['EOF_Reached'] = eof_reached
     
     ret_str = str(ret)
     ret_str = ret_str.replace('\'', '"')
