@@ -6,7 +6,40 @@
 from pathlib import Path
 import os ,json ,requests ,zipfile, tarfile
 from IPython.display import display, HTML, Image , Markdown
+import os ,configparser ,json ,logging ,sys
+from snowflake.snowpark.session import Session
 
+# logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
+# logger = logging.getLogger('util')
+
+
+def get_config(p_project_home_dir: str) -> configparser.ConfigParser:
+    config_fl = f'{p_project_home_dir}/config.ini'
+    config = configparser.ConfigParser()
+    
+    with open(config_fl) as f:
+        config.read(config_fl)
+    
+    return config
+
+def get_snowflake_conn_information(p_project_home_dir: str) -> json:
+    # logger.debug('Fetching connection information ...')
+    conn_info = None
+
+    config = get_config(p_project_home_dir)
+    
+    connection_flpath =  os.path.join(p_project_home_dir ,config['APP']['connection_fl'])
+
+    with open(connection_flpath) as conn_f:
+        conn_info = json.load(conn_f)
+
+    return conn_info
+    
+def connect_to_snowflake(p_project_home_dir: str) -> Session:
+    # logger.info('Connecting to snowflake ...')
+    conn_info = get_snowflake_conn_information(p_project_home_dir)
+    sp_session = Session.builder.configs(conn_info).create()
+    return sp_session
 
 def download_library_frompypi_tolocal(p_pypi_url :str ,p_library_file :str ,p_download_dir :str):
     """ Download library to a local folder. Typically used for downloading third party
