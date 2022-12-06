@@ -157,6 +157,15 @@ def parse_breakdown_save_wrapper(p_session: Session ,p_approx_batch_size: int
     
     return rec_count ,eof_reached
 
+def insert_execution_status(p_session: Session ,p_datafile: str ,p_task_name: str ,p_elapsed: str ,p_status: dict):
+    ret_str = str(p_status)
+    ret_str = ret_str.replace('\'', '"')
+    sql_stmt = f'''
+        insert into segment_task_execution_status( data_file  ,task_name  ,elapsed  ,task_ret_status ) 
+        values('{p_datafile}' ,'{p_task_name}' ,'{p_elapsed}' ,'{ret_str}');
+    '''
+    p_session.sql(sql_stmt).collect()
+
 def main(p_session: Session ,p_approx_batch_size: int 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
     ,p_from_seg: int ,p_to_seg: int ,p_task_name: str):
@@ -178,12 +187,7 @@ def main(p_session: Session ,p_approx_batch_size: int
     ret['ingested_record_counts'] = seg_record_counts
     ret['EOF_Reached'] = eof_reached
     
-    ret_str = str(ret)
-    ret_str = ret_str.replace('\'', '"')
-    sql_stmt = f'''
-        insert into segment_task_execution_status(task_name ,task_ret_status) values('{p_task_name}' ,'{ret_str}');
-    '''
-    p_session.sql(sql_stmt).collect()
+    insert_execution_status(p_session ,p_datafile ,p_task_name ,elapsed ,ret)
     
     ret['status'] = True
     return ret

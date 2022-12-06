@@ -66,8 +66,8 @@ def reshape_tasks_to_matrix(p_tasks_count: int ,p_parallel: int):
     m = -1
     n = -1
     # Keep the matrix in 20 X 10 matrix
-    for x in range(21):
-        for y in range(11):
+    for x in range(p_parallel):
+        for y in range(p_parallel):
             if x*y == t:
                 m = max(x ,y)
                 n = min(x, y)

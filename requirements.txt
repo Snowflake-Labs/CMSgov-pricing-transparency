@@ -5,3 +5,4 @@ notebook
 jinja2
 jinjasql
 iplantuml
+ipyregulartable
