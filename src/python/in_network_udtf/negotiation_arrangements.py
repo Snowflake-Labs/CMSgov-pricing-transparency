@@ -22,6 +22,52 @@ def get_basename_of_datafile(p_datafile:str) -> str:
     fl_base = os.path.splitext(base)
     return fl_base[0]
 
+def get_snowpark_dataframe(p_session: Session ,p_df: pd.DataFrame):
+    # Convert the data frame into Snowpark dataframe, needed for merge operation
+    sp_df = p_session.createDataFrame(p_df)
+
+    # The column names gets defined in the snowpark dataframe in a case sensitive manner
+    # hence rename them into a non case sensitive manner
+    for c in p_df.columns:
+        sp_df = sp_df.with_column_renamed(F.col(f'"{c}"'), c.upper())
+
+    return sp_df
+
+def save_header(p_session: Session ,p_innetwork_hdr ,p_rec):
+    negotiated_rates_count = len(p_rec['negotiated_rates']) if 'negotiated_rates' in p_rec else -1
+    bundled_codes_count = len(p_rec['bundled_codes']) if 'bundled_codes' in p_rec else -1
+    covered_services_count = len(p_rec['covered_services_count']) if 'covered_services_count' in p_rec else -1
+
+    curr_rec = p_innetwork_hdr.copy()
+    curr_rec['NEGOTIATED_RATES_NAME'] = p_innetwork_hdr['name']
+    curr_rec['NEGOTIATED_RATES_INFO'] = str(p_innetwork_hdr)
+    curr_rec['NEGOTIATED_RATES_COUNT'] = negotiated_rates_count
+    curr_rec['BUNDLED_CODES_COUNT'] = bundled_codes_count
+    curr_rec['COVERED_SERVICES_COUNT'] = covered_services_count
+
+    batch_records = []
+    batch_records.append(curr_rec)
+    df = pd.DataFrame(batch_records)
+    sp_df = get_snowpark_dataframe(p_session ,df)
+    
+    target_table = p_session.table('in_network_rates_segment_header_V2')
+    merged_df = target_table.merge(sp_df
+        ,(target_table['DATA_FILE'] == sp_df['DATA_FILE']) 
+            & (target_table['NEGOTIATED_RATES_NAME'] == sp_df['NEGOTIATED_RATES_NAME'])
+        ,[
+          F.when_not_matched().insert({ 
+            'SEGMENT_ID': sp_df['SEGMENT_ID']
+            ,'DATA_FILE': sp_df['DATA_FILE']
+            ,'NEGOTIATED_RATES_NAME': sp_df['NEGOTIATED_RATES_NAME']
+            ,'NEGOTIATED_RATES_INFO': sp_df['NEGOTIATED_RATES_INFO']
+            ,'NEGOTIATED_RATES_COUNT': sp_df['NEGOTIATED_RATES_COUNT']
+            ,'BUNDLED_CODES_COUNT': sp_df['BUNDLED_CODES_COUNT']
+            ,'COVERED_SERVICES_COUNT': sp_df['COVERED_SERVICES_COUNT']
+            })
+        ])
+
+    return merged_df
+
 def upload_segments_file_to_stage(p_session: Session ,p_local_dir: str ,p_target_stage: str ,p_stage_dir: str):
     logger.info(f" Uploading data to stage: {p_target_stage}/{p_stage_dir} ... ")
 
@@ -41,6 +87,7 @@ def upload_segments_file_to_stage(p_session: Session ,p_local_dir: str ,p_target
                 # ,source_compression='NONE')
     
     #p_session.sql(f'alter stage {p_target_stage} refresh; ').collect()
+    return
 
 def divide_list_to_chunks(p_list, p_chunk_size):
     #Ref: https://www.geeksforgeeks.org/break-list-chunks-size-n-python/
@@ -119,6 +166,8 @@ def parse_breakdown_save(p_session: Session ,p_approx_batch_size: int
             #if files_written >= l_approx_batch_size:
         upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename)
         shutil.rmtree(out_folder)
+
+        save_header(p_session ,innetwork_hdr ,rec)
 
     #upload any residual
     upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename)
