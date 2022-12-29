@@ -1,8 +1,0 @@
-snowflake-snowpark-python
-pandas
-numpy
-notebook
-jinja2
-jinjasql
-iplantuml
-ipyregulartable

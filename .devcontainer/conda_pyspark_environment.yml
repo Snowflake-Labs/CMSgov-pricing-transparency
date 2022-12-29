@@ -1,0 +1,24 @@
+#ref https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#create-env-file-manually
+
+name: pysnowpark
+channels:
+  - https://repo.anaconda.com/pkgs/snowflake
+  - defaults
+dependencies:
+  - python=3.8
+  - pyarrow==8.0.0
+  - snowflake-snowpark-python
+  - pandas
+  - numpy
+  - ipykernel
+  - pandas-profiling
+  - ipywidgets
+  - seaborn
+  - bokeh
+  - pip
+  - pip:
+    - snowflake-cli-labs
+    - streamlit
+    - jupyterlab
+    - ijson
+    - simplejson
