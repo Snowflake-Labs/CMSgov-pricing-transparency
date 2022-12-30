@@ -37,8 +37,8 @@ create or replace stage data_stg
     directory = ( enable = true )
     comment = 'used for holding data.';
 
-create or replace stage model_stg
-    comment = 'used for holding ml models.';
+-- create or replace stage model_stg
+--     comment = 'used for holding ml models.';
 
 
 -- =========================
@@ -66,7 +66,7 @@ create or replace transient table task_to_segmentids (
 comment = 'Maps the task that would be spunned to parse the data file. Indicates the segments that should be parsed by these task instances'
 ;
 
-create or replace transient table in_network_rates_segment_header_V2 (
+create or replace transient table in_network_rates_segment_header (
     seq_no number
     ,data_file varchar
     ,segment_id varchar
@@ -80,14 +80,36 @@ create or replace transient table in_network_rates_segment_header_V2 (
 comment = 'Used for storing header portion of the negotiated arragments'
 ;
 
-create or replace transient table negotiated_arrangment_segments_v2 (
-    seq_no number
-    ,data_file varchar
-    ,segment_id varchar
-    ,segment_type varchar
-    ,segment_data varchar
-    ,data_hash varchar
-    ,inserted_at timestamp default current_timestamp()
-)
-comment = 'Used for storing parsed segments of negotiated arragments of type negotiated_rates or bundled_codes or covered_services'
-;
+-- create or replace transient table negotiated_arrangment_segments_v2 (
+--     seq_no number
+--     ,data_file varchar
+--     ,segment_id varchar
+--     ,segment_type varchar
+--     ,segment_data varchar
+--     ,data_hash varchar
+--     ,inserted_at timestamp default current_timestamp()
+-- )
+-- comment = 'Used for storing parsed segments of negotiated arragments of type negotiated_rates or bundled_codes or covered_services'
+-- ;
+
+
+
+
+-- CREATE or replace external table ext_negotiated_arrangments_staged
+-- location = @ext_data_stg/data_pricing_parsed
+-- FILE_FORMAT = ( TYPE = JSON )
+-- ;
+
+
+-- CREATE or replace external table ext_negotiated_arrangments_staged(
+--     p_data_fl varchar as ( SPLIT_PART(metadata$filename, '/', 2) )
+--     ,p_segment_id varchar as ( SPLIT_PART(metadata$filename, '/', 3) )
+-- )
+-- partition by (p_data_fl ,p_segment_id)
+-- location = @ext_data_stg/data_pricing_parsed
+-- --partition_type = user_specified
+-- --FILE_FORMAT = ( TYPE = JSON )
+-- FILE_FORMAT = ( TYPE = PARQUET )
+-- ;
+
+-- ALTER EXTERNAL TABLE ext_negotiated_arrangments_staged REFRESH;
