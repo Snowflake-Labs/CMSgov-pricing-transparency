@@ -15,7 +15,7 @@ PUT file://./src/python/negotiation_arrangements.py @lib_stg/scripts
     overwrite = true;
 
 create or replace procedure parse_negotiation_arrangement_segments(
-            batch_size integer ,stage_path varchar ,staged_data_flname varchar ,target_stage_for_segment_files varchar
+            stage_path varchar ,staged_data_flname varchar ,target_stage_and_path varchar
             ,from_idx integer ,to_idx integer)
         returns variant
         language python
@@ -25,4 +25,5 @@ create or replace procedure parse_negotiation_arrangement_segments(
             ,'@lib_stg/scripts/sp_commons.py')
         handler = 'negotiation_arrangements.main'
 
--- call parse_negotiation_arrangement_segments(1000 ,)
+-- call parse_negotiation_arrangement_segments( 'data_stg/data','reduced_sample_data.json','@ext_data_stg/raw_parsed' ,0 ,10);
+-- call parse_negotiation_arrangement_segments( 'data_stg/data','2022_10_01_priority_health_HMO_in-network-rates.zip','@ext_data_stg/raw_parsed' ,0 ,200)

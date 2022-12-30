@@ -21,17 +21,15 @@ st.write("""
     such activities like creating database, stored procs, roles ,stage etc..
 """)
 
-config = None
+config = L.get_config(PROJECT_HOME_DIR)
 sp_session = None
 if "snowpark_session" not in st.session_state:
-    config = L.get_config(PROJECT_HOME_DIR)
     sp_session = L.connect_to_snowflake(PROJECT_HOME_DIR)
     sp_session.use_role(f'''{config['SNOW_CONN']['role']}''')
     sp_session.use_schema(f'''{config['SNOW_CONN']['database']}.{config['SNOW_CONN']['schema']}''')
     sp_session.use_warehouse(f'''{config['SNOW_CONN']['warehouse']}''')
     st.session_state['snowpark_session'] = sp_session
 else:
-    config = L.get_config(PROJECT_HOME_DIR)
     sp_session = st.session_state['snowpark_session']
 
 #-----------------------------------------------------
@@ -76,4 +74,20 @@ with st.expander("Step 3- Define functions and procedures" , False):
         st.button('Define functions and procedures'
             ,on_click=exec_sql_script
             ,args = ('./src/sql-script/3_define_fns.sql' ,script_output_3)
+        )
+
+with st.expander("Step 4- Upload sample data" , False):
+    script_output_4 = st.empty()
+    with script_output_4.container():
+        st.button('Upload sample data'
+            ,on_click=exec_sql_script
+            ,args = ('./src/sql-script/4_upload_sample_data.sql' ,script_output_4)
+        )
+
+with st.expander("Step 5- Define views & tables" , False):
+    script_output_5 = st.empty()
+    with script_output_5.container():
+        st.button('Define tables and views'
+            ,on_click=exec_sql_script
+            ,args = ('./src/sql-script/5_define_external_tables.sql' ,script_output_5)
         )

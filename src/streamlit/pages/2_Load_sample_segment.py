@@ -13,20 +13,12 @@ import sflk_base as L
 PROJECT_HOME_DIR='.'
 
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
-logger = logging.getLogger('exec_sql_script')
-
-st.markdown(f"# Stage sample image dataset")
-st.markdown(f"**NOTE:** This will take anywhere from 15-20 min range.")
-
-st.write("""
-    Lorem ipsum...
-""")
+logger = logging.getLogger('2_Load_sample_segment')
 
 # Initialize a session with Snowflake
-config = None
+config = L.get_config(PROJECT_HOME_DIR)
 sp_session = None
 if "snowpark_session" not in st.session_state:
-    config = L.get_config(PROJECT_HOME_DIR)
     sp_session = L.connect_to_snowflake(PROJECT_HOME_DIR)
     sp_session.use_role(f'''{config['APP_DB']['role']}''')
     sp_session.use_schema(f'''{config['APP_DB']['database']}.{config['APP_DB']['schema']}''')
@@ -40,6 +32,24 @@ import pandas as pd
 import numpy as np
 import datetime, os
 import snowflake.snowpark.functions as F
+
+st.markdown(f"# Load sample segment")
+
+para = f'''
+In this page, we demonstrate parsing of the sample data file [reduced_sample_data.json]({PROJECT_HOME_DIR}/data/reduced_sample_data.json) and
+the various artifacts that gets populated
+'''
+
+
+st.markdown(f"**NOTE:** This will take anywhere from 15-20 min range.")
+
+st.write("""
+    Lorem ipsum...
+""")
+
+
+
+
 
 parsed_image_tbl = 'image_parsed_raw_skimage'
 img_stg = st.text_input('Stage containing the images files', 'data_stg') 

@@ -67,11 +67,9 @@ comment = 'Maps the task that would be spunned to parse the data file. Indicates
 ;
 
 create or replace transient table in_network_rates_segment_header (
-    seq_no number
-    ,data_file varchar
+    data_file varchar
     ,segment_id varchar
-    ,negotiated_rates_name varchar
-    ,negotiated_rates_info varchar
+    ,negotiated_rates_info variant
     ,negotiated_rates_count number
     ,bundled_codes_count number
     ,covered_services_count number

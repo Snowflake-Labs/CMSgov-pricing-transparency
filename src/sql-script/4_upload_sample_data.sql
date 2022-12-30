@@ -5,8 +5,9 @@ use warehouse &SNOW_CONN_warehouse;
 use schema &APP_DB_database.public;
 
 -- =========================
-PUT file://./data/reduced_sample_data.json @data_stg/raw_data
+PUT file://./data/* @data_stg/data
     auto_compress = false
-    overwrite = true;
+    overwrite = true
+    parallel=5;
 
 -- =========================
