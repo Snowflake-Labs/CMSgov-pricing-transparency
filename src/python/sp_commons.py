@@ -33,3 +33,4 @@ def insert_execution_status(p_session: Session ,p_datafile: str ,p_elapsed: str 
         values('{p_datafile}' ,system$current_user_task_name() ,'{p_elapsed}' ,'{ret_str}');
     '''
     p_session.sql(sql_stmt).collect()
+

@@ -78,36 +78,11 @@ create or replace transient table in_network_rates_segment_header (
 comment = 'Used for storing header portion of the negotiated arragments'
 ;
 
--- create or replace transient table negotiated_arrangment_segments_v2 (
---     seq_no number
---     ,data_file varchar
---     ,segment_id varchar
---     ,segment_type varchar
---     ,segment_data varchar
---     ,data_hash varchar
---     ,inserted_at timestamp default current_timestamp()
--- )
--- comment = 'Used for storing parsed segments of negotiated arragments of type negotiated_rates or bundled_codes or covered_services'
--- ;
+create or replace transient table in_network_rates_file_header (
+    data_file varchar
+    ,header variant
+    ,inserted_at timestamp default current_timestamp()
+)
+comment = 'Used for storing header portion of the pricing transperancy files'
+;
 
-
-
-
--- CREATE or replace external table ext_negotiated_arrangments_staged
--- location = @ext_data_stg/data_pricing_parsed
--- FILE_FORMAT = ( TYPE = JSON )
--- ;
-
-
--- CREATE or replace external table ext_negotiated_arrangments_staged(
---     p_data_fl varchar as ( SPLIT_PART(metadata$filename, '/', 2) )
---     ,p_segment_id varchar as ( SPLIT_PART(metadata$filename, '/', 3) )
--- )
--- partition by (p_data_fl ,p_segment_id)
--- location = @ext_data_stg/data_pricing_parsed
--- --partition_type = user_specified
--- --FILE_FORMAT = ( TYPE = JSON )
--- FILE_FORMAT = ( TYPE = PARQUET )
--- ;
-
--- ALTER EXTERNAL TABLE ext_negotiated_arrangments_staged REFRESH;

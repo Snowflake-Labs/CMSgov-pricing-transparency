@@ -184,7 +184,7 @@ def parse_save_segment_children(p_seq_no: int ,p_segment_id: str ,p_out_folder: 
         df.to_parquet(out_file,compression='gzip')  
 
 def parse_breakdown_save(p_session: Session  
-        ,p_datafile: str ,p_target_stage: str 
+        ,p_stage_path: str ,p_datafile: str ,p_target_stage: str 
         ,p_from_seg: int ,p_to_seg: int ,f):
     logger.info('Parsing and breaking down in_network ...')
     
@@ -254,13 +254,13 @@ def parse_breakdown_save_wrapper(p_session: Session
     if json_fl.endswith('.json'):
         with _snowflake.open(json_fl) as f:
             rec_count ,eof_reached = parse_breakdown_save(p_session 
-                ,p_datafile ,p_target_stage 
+                ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)
 
     elif json_fl.endswith('.gz'):
         with gzip.open(_snowflake.open(json_fl),'r') as f:
             rec_count ,eof_reached = parse_breakdown_save(p_session 
-                ,p_datafile ,p_target_stage 
+                ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)   
 
     elif json_fl.endswith('.zip'):
@@ -268,7 +268,7 @@ def parse_breakdown_save_wrapper(p_session: Session
             for file in zf.namelist():
                 with zf.open(file) as f:
                     rec_count ,eof_reached = parse_breakdown_save(p_session 
-                        ,p_datafile ,p_target_stage 
+                        ,p_stage_path ,p_datafile ,p_target_stage 
                         ,p_from_seg ,p_to_seg ,f)
     else:
         raise Exception(f'input file is of unknown compression format {p_datafile}')
