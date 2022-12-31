@@ -50,9 +50,16 @@ def parse_header_elements(p_session: Session
 
     l_fl_header['DATA_FILE'] = p_datafile
 
+    segments_count = -1
+
     for prefix, event, value in parser:
         if (event != 'string'):
             continue
+        
+        elif (prefix == 'in_network.item.billing_code'):
+            segments_count += 1
+            continue
+
         elif ('in_network' in prefix):
             continue
         elif( value is None):
@@ -62,6 +69,8 @@ def parse_header_elements(p_session: Session
         
         l_fl_header[prefix] = value
     
+    l_fl_header['total_segments'] = segments_count
+
     return l_fl_header
 
 def parse_breakdown_save_wrapper(p_session: Session 

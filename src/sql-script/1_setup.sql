@@ -86,3 +86,12 @@ create or replace transient table in_network_rates_file_header (
 comment = 'Used for storing header portion of the pricing transperancy files'
 ;
 
+create or replace view segments_counts_for_datafile_v 
+comment = 'view to indicate if all the segments were parsed out'
+as
+select 
+    distinct data_file ,task_name
+    ,JSON_EXTRACT_PATH_TEXT(task_ret_status ,'last_seg_no') as total_no_of_segments
+from segment_task_execution_status
+where JSON_EXTRACT_PATH_TEXT(task_ret_status ,'EOF_Reached') = True
+;

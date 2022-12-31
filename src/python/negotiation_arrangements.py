@@ -294,8 +294,8 @@ def main(p_session: Session
     last_seg_no ,eof_reached = parse_breakdown_save_wrapper(p_session 
         ,p_stage_path ,p_datafile ,p_target_stage
         ,p_from_seg ,p_to_seg)
+    
     end = datetime.datetime.now()
-
     elapsed = (end - start)
     ret['elapsed'] =  f'=> {elapsed} '
     ret['last_seg_no'] = last_seg_no
