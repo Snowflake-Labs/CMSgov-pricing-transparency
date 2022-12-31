@@ -58,8 +58,8 @@ create or replace transient table task_to_segmentids (
     bucket varchar
     ,data_file varchar
     ,assigned_task_name varchar
-    ,segment_ids varchar
-    ,segments_count number
+    ,from_idx number
+    ,to_idx number
     ,segments_record_count number
     ,inserted_at timestamp default current_timestamp()
 )
