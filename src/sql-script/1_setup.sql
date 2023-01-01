@@ -2,6 +2,22 @@
 -- The following resources are assumed and pre-existing
 use warehouse &SNOW_CONN_warehouse;
 
+-- ============================
+-- Task role definition
+-- This role is needed for building dags and tasks as part of the demo
+-- ============================
+use role securityadmin;
+create or replace role &APP_DB_task_role 
+    comment = ' task admin created for pricing transperancy solution';
+
+-- set the active role to accountadmin before granting the account-level privileges to the new role
+use role accountadmin;
+grant execute task, execute managed task on account to role &APP_DB_task_role;
+
+-- set the active role to securityadmin to show that this role can grant a role to another role
+use role securityadmin;
+grant role &APP_DB_task_role to role &APP_DB_role;
+
 -- =========================
 -- This script is used to configure the base resources that will be used by
 -- the demo

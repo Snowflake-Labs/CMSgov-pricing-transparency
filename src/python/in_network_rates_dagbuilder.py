@@ -8,8 +8,11 @@ from typing import List
 from sp_commons import *
 
 TASK_TO_SEGMENTIDS_TBL = 'task_to_segmentids'
-# ASSUMED_TOTAL_NR_SEGMENTS = 1000 * 20
 DAG_MATRIX_SHAPE = (5,15)
+
+# 86400000 => 1 day
+# 3600000 => 1 hour
+USER_TASK_TIMEOUT = 86400000
 
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 logger = logging.getLogger("in_network_rates_dagbuilder")
@@ -70,6 +73,9 @@ def split_range_into_buckets(p_items_per_bucket, p_num_buckets):
         round(step*i)+1 if i >= 1 else 0
         ,round(step*(i+1))) for i in range(p_num_buckets)]
 
+def get_task_name(p_fl_basename ,p_m ,p_n):
+    return f'''T_{p_fl_basename}_{p_m}_{p_n}'''
+
 def save_tasks_to_segments(p_datafile: str ,p_segments_per_task: int):
     logger.info('Saving tasks to segment')
 
@@ -104,7 +110,7 @@ def create_root_task_and_fh_loader(p_session: Session
 
     fl_basename = get_basename_of_datafile(p_datafile)
     root_task_name = f'''DAG_ROOT_{fl_basename}'''
-    fh_task_name = f'tsk_fh_{fl_basename}'
+    fh_task_name = f't_fh_{fl_basename}'
 
     sql_stmts = [
         f'alter task if exists {root_task_name} suspend;' 
@@ -120,19 +126,37 @@ def create_root_task_and_fh_loader(p_session: Session
                 end;
         '''
         ,f'''
-        create or replace task fh_{fh_task_name}
+        create or replace task {fh_task_name}
             warehouse = {p_warehouse}
             comment = 'file header data ingestor for file: {p_datafile}'
             after {root_task_name} 
             as 
             call parse_file_header('{p_stage_path}','{p_datafile}');
         '''
-        # ,f'alter task if exists fh_{p_root_task_name} resume;'
+        ,f'alter task if exists {fh_task_name} resume;'
     ]
     for stmt in sql_stmts:
         p_session.sql(stmt).collect()
 
     return root_task_name ,fh_task_name
+
+def reshape_tasks_to_matrix(p_task_list):
+    arr = np.asarray(p_task_list ,dtype=object)
+    marr = arr.reshape(DAG_MATRIX_SHAPE[1] ,-1)
+    marr = marr.transpose()
+
+    return marr
+
+def build_tasks_dag(p_root_task ,p_task_matrix):
+    task_matrix_dag = p_task_matrix.copy()
+    for r_idx ,dag_r in enumerate(task_matrix_dag):
+        prev_task = p_root_task
+        
+        for c_idx ,dag_r_c in enumerate(dag_r):
+            v = (dag_r_c ,prev_task)
+            prev_task = dag_r_c
+            task_matrix_dag[r_idx][c_idx] = v
+    return task_matrix_dag
 
 def create_subtasks(p_session: Session ,p_root_task_name: str 
     ,p_stage_path: str  ,p_datafile: str ,p_target_stage: str
@@ -140,48 +164,41 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
     logger.info(f'Creating the task ddl ...')
     line_end_tasks = []
     
-    idx = 0
-    for m in range(DAG_MATRIX_SHAPE[0]):
-        preceding_task = p_root_task_name
-        end_task_name = ''
+    # The following works out the logic of arranging the list into a DAG parallel matrix shape
+    #  - First we build out a matrix of shape as defined by DAG_MATRIX_SHAPE
+    task_matrix = reshape_tasks_to_matrix(p_task_lists)
+    #  - We then iterate threw the matrix to link tasks together
+    task_matrix_dag = build_tasks_dag(p_root_task_name ,task_matrix)
+    #  - For each of the DAG row, we find out the last elements of the row also
+    line_end_tasks = task_matrix[:,-1]
 
-        for n in range(DAG_MATRIX_SHAPE[1]):
-            task_name = p_task_lists[idx]
-            
-            #taskname format: task_name = f'''T_{fl_basename}_{m}_{n}'''
-            l = len(task_name.split('_'))
-            range_to = task_name.split('_')[l-1]
-            range_from = task_name.split('_')[l-2]
+    # We now iterate through the dag matrix and define the tasks
+    task_matrix_dag_asarray = task_matrix_dag.flatten()
+    for task_name ,preceding_task in task_matrix_dag_asarray:
+        l = len(task_name.split('_'))
+        range_to = task_name.split('_')[l-1]
+        range_from = task_name.split('_')[l-2]
 
-            # 86400000 => 1 day
-            # 3600000 => 1 hour
-            sql_stmts = [
-                f'''
-                    create or replace task {task_name}
-                    warehouse = {p_warehouse}
-                    user_task_timeout_ms = 86400000
-                    comment = 'negotiated_arrangements segment range [{range_from} - {range_to}] data ingestor '
-                    after {preceding_task}
-                    as
-                    begin
-                        call parse_negotiation_arrangement_segments(
-                            '{p_stage_path}' ,'{p_datafile}' ,'{p_target_stage}' 
-                            ,{range_from} ,{range_to} );
+        sql_stmts = [
+            f'''
+                create or replace task {task_name}
+                warehouse = {p_warehouse}
+                user_task_timeout_ms = {USER_TASK_TIMEOUT}
+                comment = 'negotiated_arrangements segment range [{range_from} - {range_to}] data ingestor '
+                after {preceding_task}
+                as
+                begin
+                    call parse_negotiation_arrangement_segments(
+                        '{p_stage_path}' ,'{p_datafile}' ,'{p_target_stage}' 
+                        ,{range_from} ,{range_to} );
 
-                        alter task if exists {task_name} suspend;
-                    end;
-                '''
-                ,f''' alter task if exists  {task_name} resume; '''
-            ]
-            for stmt in sql_stmts:
-                p_session.sql(stmt).collect()
-
-            end_task_name = task_name
-            preceding_task = task_name
-            idx += 1
-        
-        if end_task_name != '':
-            line_end_tasks.append(end_task_name)
+                    alter task if exists {task_name} suspend;
+                end;
+            '''
+            ,f''' alter task if exists  {task_name} resume; '''
+        ]
+        for stmt in sql_stmts:
+            p_session.sql(stmt).collect()
     
     return line_end_tasks
 
@@ -242,13 +259,15 @@ def main(p_session: Session
     ret['root_task'] = root_task_name
 
     # # create sub tasks and add to root task
+    task_to_segments_df.sort_values(by=['BUCKET'], inplace=True)
     task_list = list(task_to_segments_df.ASSIGNED_TASK_NAME.values)
     ret['task_matrix_shape'] = DAG_MATRIX_SHAPE
     
     line_end_tasks = create_subtasks(p_session ,root_task_name 
         ,p_stage_path ,p_datafile ,p_target_stage
         ,p_warehouse ,task_list)
-    line_end_tasks.append(fh_task_name)
+    line_end_tasks = np.append(line_end_tasks ,[fh_task_name])
+    line_end_tasks = line_end_tasks.tolist()
 
     # create term task
     term_task_name = create_term_tasks(p_session ,p_datafile ,p_warehouse ,root_task_name ,line_end_tasks ,task_list)

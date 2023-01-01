@@ -131,6 +131,7 @@ dmypy.json
 # --------------------- CUSTOMIZATION ---------------
 
 # Ignore checkpoints in subdirectories
+.app_store/
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
 **/.DS_Store
