@@ -248,6 +248,7 @@ def parse_breakdown_save_wrapper(p_session: Session
     logger.info('Parsing and breaking down in_network ...')
     rec_count = -1
     eof_reached = True
+    parsing_error = ''
     json_fl = f'@{p_stage_path}/{p_datafile}'
 
     rdata = ''
@@ -256,6 +257,21 @@ def parse_breakdown_save_wrapper(p_session: Session
             rec_count ,eof_reached = parse_breakdown_save(p_session 
                 ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)
+
+    elif json_fl.endswith('.tar.gz'):
+        raise Exception(f'input file is of unknown compression format {p_datafile}')
+
+        #TODO have same issues related to parsing this type of file. something for the future
+        # try:
+        #     rec_count ,eof_reached = (1 ,True)
+        #     from io import BytesIO
+        #     import tarfile
+        #     with tarfile.open(fileobj = BytesIO(_snowflake.open(json_fl))) as f:
+        #         rec_count ,eof_reached = parse_breakdown_save(p_session 
+        #             ,p_stage_path ,p_datafile ,p_target_stage 
+        #             ,p_from_seg ,p_to_seg ,f)
+        # except Exception as e:
+        #     parsing_error = str(e)
 
     elif json_fl.endswith('.gz'):
         with gzip.open(_snowflake.open(json_fl),'r') as f:
@@ -270,10 +286,11 @@ def parse_breakdown_save_wrapper(p_session: Session
                     rec_count ,eof_reached = parse_breakdown_save(p_session 
                         ,p_stage_path ,p_datafile ,p_target_stage 
                         ,p_from_seg ,p_to_seg ,f)
+
     else:
         raise Exception(f'input file is of unknown compression format {p_datafile}')
     
-    return rec_count ,eof_reached
+    return rec_count ,eof_reached ,parsing_error
 
 def main(p_session: Session 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
@@ -291,9 +308,10 @@ def main(p_session: Session
     #if the current from_seg and to_seg is within the last_seg_no (of that record)
     #otherwise exit out
 
-    last_seg_no ,eof_reached = parse_breakdown_save_wrapper(p_session 
+    last_seg_no ,eof_reached ,parsing_error = parse_breakdown_save_wrapper(p_session 
         ,p_stage_path ,p_datafile ,p_target_stage
         ,p_from_seg ,p_to_seg)
+    ret['Parsing_error'] = parsing_error
     
     end = datetime.datetime.now()
     elapsed = (end - start)

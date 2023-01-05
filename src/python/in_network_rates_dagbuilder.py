@@ -8,7 +8,7 @@ from typing import List
 from sp_commons import *
 
 TASK_TO_SEGMENTIDS_TBL = 'task_to_segmentids'
-DAG_MATRIX_SHAPE = (5,5)
+DAG_MATRIX_SHAPE = (5,15)
 
 # 86400000 => 1 day
 # 3600000 => 1 hour
