@@ -317,7 +317,6 @@ def should_proceed_with_parsing(p_session: Session ,p_datafile: str ,p_from_seg:
 
     return (total_no_of_segments ,should_proceed_processing)
     
-
 def main(p_session: Session 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
     ,p_from_seg: int ,p_to_seg: int):

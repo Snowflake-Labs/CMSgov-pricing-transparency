@@ -118,3 +118,15 @@ from segment_task_execution_status
 where EOF_Reached = True
 order by start_rec_num
 ;
+
+create or replace view current_segment_parsing_tasks_v
+comment = 'list of running tasks that are parsing a data file'
+as
+select 
+    l.* 
+    ,r.* exclude (data_file ,inserted_at)
+from segment_task_execution_status as l
+    join task_to_segmentids as r
+        on r.data_file = l.data_file
+            and contains( lower(l.task_name) ,lower(r.assigned_task_name)) = True
+where end_time is null;

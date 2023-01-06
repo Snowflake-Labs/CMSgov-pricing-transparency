@@ -66,3 +66,16 @@ create or replace procedure in_network_rates_dagbuilder(
 ;
 
 -- call in_network_rates_dagbuilder('data_stg/data','reduced_sample_data.json','@ext_data_stg/raw_parsed', 200 ,'DEMO_BUILD_WH');
+
+-- =========================
+PUT file://./src/python/delete_dag_for_datafile.py @lib_stg/scripts overwrite = true;
+
+create or replace procedure delete_dag_for_datafile(staged_data_flname varchar)
+    returns variant
+    language python
+    runtime_version = '3.8'
+    packages = ('snowflake-snowpark-python' ,'pandas')
+    imports = ('@lib_stg/scripts/delete_dag_for_datafile.py' 
+        ,'@lib_stg/scripts/sp_commons.py')
+    handler = 'delete_dag_for_datafile.main'
+;

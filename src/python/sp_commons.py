@@ -1,7 +1,7 @@
 '''
 Script file containing functions that are common and shared across multiple stored procedures and functions
 '''
-import os ,logging ,sys
+import os ,logging ,sys ,re
 from snowflake.snowpark.session import Session
 import snowflake.snowpark.functions as F
 import pandas as pd
@@ -14,6 +14,13 @@ def get_basename_of_datafile(p_datafile:str) -> str:
     fl_base = os.path.splitext(base)
     return fl_base[0]
 
+def get_cleansed_file_basename(p_datafile):
+    fl_basename = get_basename_of_datafile(p_datafile)
+    #fl_name = fl_basename.replace('-','_')
+    # Replace all non alphanumeric characters with _
+    fl_name = re.sub('[^0-9a-zA-Z]+', '_', fl_basename)
+    return fl_name
+    
 def get_snowpark_dataframe(p_session: Session ,p_df: pd.DataFrame):
     # Convert the data frame into Snowpark dataframe, needed for merge operation
     sp_df = p_session.createDataFrame(p_df)
@@ -24,15 +31,6 @@ def get_snowpark_dataframe(p_session: Session ,p_df: pd.DataFrame):
         sp_df = sp_df.with_column_renamed(F.col(f'"{c}"'), c.upper())
 
     return sp_df
-
-# def insert_execution_status(p_session: Session ,p_datafile: str ,p_elapsed: str ,p_status: dict):
-#     ret_str = str(p_status)
-#     ret_str = ret_str.replace('\'', '"')
-#     sql_stmt = f'''
-#         insert into segment_task_execution_status( data_file  ,task_name  ,elapsed  ,task_ret_status ) 
-#         values('{p_datafile}' ,system$current_user_task_name() ,'{p_elapsed}' ,'{ret_str}');
-#     '''
-#     p_session.sql(sql_stmt).collect()
 
 def report_execution_status(p_session: Session ,p_datafile: str ,p_status: dict):
     ret_str = str(p_status)

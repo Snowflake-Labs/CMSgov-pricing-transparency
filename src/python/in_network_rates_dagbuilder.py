@@ -6,6 +6,7 @@ import snowflake.snowpark.functions as F
 import hashlib
 from typing import List
 from sp_commons import *
+import re
 
 TASK_TO_SEGMENTIDS_TBL = 'task_to_segmentids'
 DAG_MATRIX_SHAPE = (5,15)
@@ -73,15 +74,23 @@ def split_range_into_buckets(p_items_per_bucket, p_num_buckets):
         round(step*i)+1 if i >= 1 else 0
         ,round(step*(i+1))) for i in range(p_num_buckets)]
 
+def get_cleansed_file_basename(p_datafile):
+    fl_basename = get_basename_of_datafile(p_datafile)
+    #fl_name = fl_basename.replace('-','_')
+    # Replace all non alphanumeric characters with _
+    fl_name = re.sub('[^0-9a-zA-Z]+', '_', fl_basename)
+    return fl_name
+
 def get_task_name(p_fl_basename ,p_m ,p_n):
-    return f'''T_{p_fl_basename}_{p_m}_{p_n}'''
+    fl_name = get_cleansed_file_basename(p_fl_basename)
+    return f'''T_{fl_name}_{p_m}_{p_n}'''
 
 def save_tasks_to_segments(p_datafile: str ,p_segments_per_task: int):
     logger.info('Saving tasks to segment')
 
     rows = []
-    fl_basename = get_basename_of_datafile(p_datafile)
-
+    fl_basename = get_cleansed_file_basename(p_datafile)
+    
     splits = split_range_into_buckets(p_segments_per_task, DAG_MATRIX_SHAPE[0] * DAG_MATRIX_SHAPE[1])
     logger.info(f'task splits : {len(splits)} ')
     #task_matrix_shape = reshape_buckets_to_matrix(splits ,parallel_rows)
@@ -108,7 +117,7 @@ def create_root_task_and_fh_loader(p_session: Session
     ,p_stage_path: str ,p_datafile: str ,p_warehouse: str): 
     logger.info(f'Creating the root task ddl ...')
 
-    fl_basename = get_basename_of_datafile(p_datafile)
+    fl_basename = get_cleansed_file_basename(p_datafile)
     root_task_name = f'''DAG_ROOT_{fl_basename}'''
     fh_task_name = f't_fh_{fl_basename}'
 
@@ -137,6 +146,7 @@ def create_root_task_and_fh_loader(p_session: Session
     ]
     for stmt in sql_stmts:
         p_session.sql(stmt).collect()
+        
 
     return root_task_name ,fh_task_name
 
@@ -206,8 +216,8 @@ def create_term_tasks(p_session: Session ,p_datafile: str
     ,p_warehouse: str ,p_root_task_name: str  ,p_line_end_task_lists:List[str] ,p_task_lists:List[str]):
     logger.info(f'Creating the task ddl ...')
 
-    m = get_basename_of_datafile(p_datafile)
-    term_task_name = f'TERM_tsk_{m}'
+    fl_basename = get_cleansed_file_basename(p_datafile)
+    term_task_name = f'TERM_tsk_{fl_basename}'
     
     after_tasks_phrase = ','.join(p_line_end_task_lists)
     task_stmts = []
