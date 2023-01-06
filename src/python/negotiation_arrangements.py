@@ -292,6 +292,33 @@ def parse_breakdown_save_wrapper(p_session: Session
     
     return rec_count ,eof_reached ,parsing_error
 
+def should_proceed_with_parsing(p_session: Session ,p_datafile: str ,p_from_seg: int ,p_to_seg: int):
+
+    if p_from_seg == 0:
+        return True
+
+    # For a given data file, check if there are any records present in the view: segments_counts_for_datafile_v
+    # see if the total_no_segments, which indicates the total number of segments in the file, is greater
+    # than the current segment range 
+    df = (p_session.table('segments_counts_for_datafile_v')
+            .filter(F.col('data_file') == F.lit(f'{p_datafile}'))
+            .with_column('current_seg_range_end', F.lit(p_to_seg))
+    )
+    df = df.with_column("seq_range_greater_than_total_segments", (df['current_seg_range_end'] >= df["TOTAL_NO_OF_SEGMENTS"]))
+    df = df.to_pandas()
+
+    #if the file contains more segments than the current segment range, then proceed. 
+    #if the file contains lesser segment do not proceed
+    #if no record is present in the view, then proceed
+    row_count = len(df)
+    should_proceed_processing = (row_count < 1)
+    total_no_of_segments = -1
+    if should_proceed_processing == False:
+        total_no_of_segments = df['TOTAL_NO_OF_SEGMENTS'][0]
+
+    return (should_proceed_processing ,total_no_of_segments)
+
+
 def main(p_session: Session 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
     ,p_from_seg: int ,p_to_seg: int):
@@ -301,25 +328,31 @@ def main(p_session: Session
     ret['start_rec_num'] = p_from_seg
     ret['end_rec_num'] = p_to_seg
 
+    report_execution_status(p_session ,p_datafile ,ret)
     start = datetime.datetime.now()
     
     #TODO verify if previously the EOF_Reached flag has been set (table: segment_task_execution_status)
     #from other parallel task instances. If it has been set; then proceed only
     #if the current from_seg and to_seg is within the last_seg_no (of that record)
     #otherwise exit out
-
-    last_seg_no ,eof_reached ,parsing_error = parse_breakdown_save_wrapper(p_session 
-        ,p_stage_path ,p_datafile ,p_target_stage
-        ,p_from_seg ,p_to_seg)
-    ret['Parsing_error'] = parsing_error
+    should_proceed_processing ,total_no_of_segments = should_proceed_with_parsing(p_session ,p_datafile ,p_from_seg ,p_to_seg)
+    if(should_proceed_processing == True):
+        last_seg_no ,eof_reached ,parsing_error = parse_breakdown_save_wrapper(p_session 
+            ,p_stage_path ,p_datafile ,p_target_stage
+            ,p_from_seg ,p_to_seg)
+        ret['Parsing_error'] = parsing_error
+        ret['last_seg_no'] = last_seg_no
+        ret['EOF_Reached'] = eof_reached
+        ret['task_ignored_parsing'] = False
+    else:
+        ret['task_ignored_parsing'] = True
+        ret['task_parsing_ignore_message'] = f'The segment range is greater than the total segments {total_no_of_segments} in the file, hence ignore further parsing'
     
     end = datetime.datetime.now()
     elapsed = (end - start)
     ret['elapsed'] =  f'=> {elapsed} '
-    ret['last_seg_no'] = last_seg_no
-    ret['EOF_Reached'] = eof_reached
-    
-    insert_execution_status(p_session ,p_datafile ,elapsed ,ret)
+
+    report_execution_status(p_session ,p_datafile ,ret)
     
     ret['status'] = True
     return ret

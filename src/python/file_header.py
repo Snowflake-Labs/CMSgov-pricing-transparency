@@ -107,6 +107,7 @@ def main(p_session: Session
     ret['data_file'] = p_datafile
 
     start = datetime.datetime.now()
+    report_execution_status(p_session ,p_datafile ,ret)
     
     l_fl_header = parse_breakdown_save_wrapper(p_session 
         ,p_stage_path ,p_datafile)
@@ -116,7 +117,7 @@ def main(p_session: Session
     elapsed = (end - start)
     ret['elapsed'] =  f'=> {elapsed} '
     
-    insert_execution_status(p_session ,p_datafile ,elapsed ,ret)
+    report_execution_status(p_session ,p_datafile ,ret)
     
     ret['status'] = True
     return ret

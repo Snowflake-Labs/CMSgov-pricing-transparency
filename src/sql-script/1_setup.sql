@@ -63,7 +63,8 @@ create or replace stage data_stg
 create or replace transient table segment_task_execution_status (
     data_file varchar
     ,task_name varchar
-    ,elapsed varchar
+    ,start_time timestamp default CURRENT_TIMESTAMP()
+    ,end_time timestamp
     ,task_ret_status varchar
     ,inserted_at timestamp default current_timestamp()
 )
@@ -107,7 +108,13 @@ comment = 'view to indicate if all the segments were parsed out'
 as
 select 
     distinct data_file ,task_name
-    ,JSON_EXTRACT_PATH_TEXT(task_ret_status ,'last_seg_no') as total_no_of_segments
+    ,JSON_EXTRACT_PATH_TEXT(task_ret_status ,'start_rec_num')::int as start_rec_num
+    ,JSON_EXTRACT_PATH_TEXT(task_ret_status ,'end_rec_num')::int as end_rec_num
+    ,JSON_EXTRACT_PATH_TEXT(task_ret_status ,'last_seg_no')::int as total_no_of_segments
+    ,timestampdiff('minute' ,start_time ,end_time) as elapsed
+    ,JSON_EXTRACT_PATH_TEXT(task_ret_status ,'Parsing_error') as Parsing_error
+    ,JSON_EXTRACT_PATH_TEXT(task_ret_status ,'EOF_Reached') as EOF_Reached
 from segment_task_execution_status
-where JSON_EXTRACT_PATH_TEXT(task_ret_status ,'EOF_Reached') = True
+where EOF_Reached = True
+order by start_rec_num
 ;

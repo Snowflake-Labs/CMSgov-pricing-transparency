@@ -25,12 +25,35 @@ def get_snowpark_dataframe(p_session: Session ,p_df: pd.DataFrame):
 
     return sp_df
 
-def insert_execution_status(p_session: Session ,p_datafile: str ,p_elapsed: str ,p_status: dict):
+# def insert_execution_status(p_session: Session ,p_datafile: str ,p_elapsed: str ,p_status: dict):
+#     ret_str = str(p_status)
+#     ret_str = ret_str.replace('\'', '"')
+#     sql_stmt = f'''
+#         insert into segment_task_execution_status( data_file  ,task_name  ,elapsed  ,task_ret_status ) 
+#         values('{p_datafile}' ,system$current_user_task_name() ,'{p_elapsed}' ,'{ret_str}');
+#     '''
+#     p_session.sql(sql_stmt).collect()
+
+def report_execution_status(p_session: Session ,p_datafile: str ,p_status: dict):
     ret_str = str(p_status)
     ret_str = ret_str.replace('\'', '"')
+
     sql_stmt = f'''
-        insert into segment_task_execution_status( data_file  ,task_name  ,elapsed  ,task_ret_status ) 
-        values('{p_datafile}' ,system$current_user_task_name() ,'{p_elapsed}' ,'{ret_str}');
+        merge into segment_task_execution_status as t
+        using (
+            select 
+            '{p_datafile}' as data_file
+            ,system$current_user_task_name() as task_name
+        ) s 
+        on t.data_file = s.data_file 
+            and t.task_name = s.task_name
+        when not matched then insert 
+            (data_file ,task_name)
+            values(s.data_file ,s.task_name)
+
+        when matched then update set 
+            t.end_time = current_timestamp()
+            ,t.task_ret_status = '{ret_str}'
+            ;
     '''
     p_session.sql(sql_stmt).collect()
-
