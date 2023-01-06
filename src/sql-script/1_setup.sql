@@ -63,9 +63,9 @@ create or replace stage data_stg
 create or replace transient table segment_task_execution_status (
     data_file varchar
     ,task_name varchar
-    ,start_time timestamp default CURRENT_TIMESTAMP()
+    ,start_time timestamp default current_timestamp()
     ,end_time timestamp
-    ,task_ret_status varchar
+    ,task_ret_status variant
     ,inserted_at timestamp default current_timestamp()
 )
 comment = 'Execution status for the various sub-tasks that gets spawned'
@@ -123,7 +123,7 @@ create or replace view current_segment_parsing_tasks_v
 comment = 'list of running tasks that are parsing a data file'
 as
 select 
-    l.* 
+    l.*  exclude(data_file ,inserted_at ,end_time ,task_ret_status)
     ,r.* exclude (data_file ,inserted_at)
 from segment_task_execution_status as l
     join task_to_segmentids as r

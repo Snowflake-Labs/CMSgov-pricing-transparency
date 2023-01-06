@@ -92,23 +92,6 @@ def save_header(p_session: Session ,p_innetwork_hdr ,p_rec):
 def upload_segments_file_to_stage(p_session: Session ,p_local_dir: str ,p_target_stage: str ,p_stage_dir: str):
     logger.info(f" Uploading data to stage: {p_target_stage}/{p_stage_dir} ... ")
 
-    # for path, currentDirectory, files in os.walk(p_local_dir):
-    #     for file in files:
-    #         # build the relative paths to the file
-    #         local_file = os.path.join(path, file)
-
-    #         # build the path to where the file will be staged
-    #         stage_dir = path.replace(p_local_dir , p_stage_dir)
-
-    #         # print(f'    {local_file} => @{p_stage}/{stage_dir}')
-    #         p_session.file.put(
-    #             local_file_name = local_file
-    #             ,stage_location = f'{p_target_stage}/{stage_dir}'
-    #             ,auto_compress=False ,overwrite=True) 
-    #             # ,source_compression='NONE')
-    
-    # #p_session.sql(f'alter stage {p_target_stage} refresh; ').collect()
-
     # get the list of folders where parquet files are present
     data_dirs = { path for path, subdirs, files in os.walk(p_local_dir) for name in files if '.parquet.gz' in name }
     
@@ -193,6 +176,7 @@ def parse_breakdown_save(p_session: Session
    
     eof_reached = True
     seq_no = -1
+    stored_segment_count = -1
     for rec in ijson.items(f, 'in_network.item' ,use_float=True):
         seq_no += 1
 
@@ -205,6 +189,7 @@ def parse_breakdown_save(p_session: Session
             eof_reached = False
             break
 
+        
         # For the header elements, ignore the repeated child elements. We
         # do this by making a deep copy of the semgenet and removing the 
         # repeateable childrens.
@@ -233,14 +218,15 @@ def parse_breakdown_save(p_session: Session
         shutil.rmtree(out_folder)
 
         save_header(p_session ,innetwork_hdr ,rec)
-
+        stored_segment_count += 1
+        
     #upload any residual
     upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename)
     # if Path(out_folder).exists() and Path(out_folder).is_dir():
     shutil.rmtree(out_folder, ignore_errors=True)
 
     # p_session.sql(f'alter stage {p_target_stage} refresh; ').collect()
-    return (seq_no ,eof_reached)
+    return (seq_no ,eof_reached ,stored_segment_count)
 
 def parse_breakdown_save_wrapper(p_session: Session 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
