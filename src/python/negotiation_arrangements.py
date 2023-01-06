@@ -295,7 +295,7 @@ def parse_breakdown_save_wrapper(p_session: Session
 def should_proceed_with_parsing(p_session: Session ,p_datafile: str ,p_from_seg: int ,p_to_seg: int):
 
     if p_from_seg == 0:
-        return True
+        return (-1 ,True)
 
     # For a given data file, check if there are any records present in the view: segments_counts_for_datafile_v
     # see if the total_no_segments, which indicates the total number of segments in the file, is greater
@@ -312,12 +312,11 @@ def should_proceed_with_parsing(p_session: Session ,p_datafile: str ,p_from_seg:
     #if no record is present in the view, then proceed
     row_count = len(df)
     should_proceed_processing = (row_count < 1)
-    total_no_of_segments = -1
-    if should_proceed_processing == False:
-        total_no_of_segments = df['TOTAL_NO_OF_SEGMENTS'][0]
+    # total_no_of_segments = df['TOTAL_NO_OF_SEGMENTS'][0] if row_count >= 1  else -1
+    total_no_of_segments = -2 if row_count >= 1  else -1
 
-    return (should_proceed_processing ,total_no_of_segments)
-
+    return (total_no_of_segments ,should_proceed_processing)
+    
 
 def main(p_session: Session 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
@@ -335,7 +334,9 @@ def main(p_session: Session
     #from other parallel task instances. If it has been set; then proceed only
     #if the current from_seg and to_seg is within the last_seg_no (of that record)
     #otherwise exit out
-    should_proceed_processing ,total_no_of_segments = should_proceed_with_parsing(p_session ,p_datafile ,p_from_seg ,p_to_seg)
+    
+    total_no_of_segments ,should_proceed_processing = should_proceed_with_parsing(p_session ,p_datafile ,p_from_seg ,p_to_seg)
+    
     if(should_proceed_processing == True):
         last_seg_no ,eof_reached ,parsing_error = parse_breakdown_save_wrapper(p_session 
             ,p_stage_path ,p_datafile ,p_target_stage
