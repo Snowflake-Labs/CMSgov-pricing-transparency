@@ -104,6 +104,28 @@ def get_files_staged(p_data_file):
     '''
     return sp_session.sql(sql_stmt)
 
+def get_segments_stats(p_data_file):
+    sql_stmt = f'''
+        select 
+            * exclude(data_file)
+        from negotiated_rates_segment_stats_v
+        where data_file = '{p_data_file}'
+    '''
+    return sp_session.sql(sql_stmt)
+
+def get_segments_chunks_sample(p_data_file):
+    sql_stmt = f'''
+        select 
+            * exclude(data_file)
+        from negotiated_rates_segment_info_v
+        where data_file = '{p_data_file}'
+        limit 5
+    '''
+    return sp_session.sql(sql_stmt)
+# select * from negotiated_rates_segment_info_v;
+
+
+
 data_file = ''
 data_files = []
 def build_ui():
@@ -113,6 +135,8 @@ def build_ui():
         data_file = fl
         st.session_state['data_file'] = data_file
 
+
+    st.write(f'## Data File: {data_file}')
     file_stats_tab, load_audits_tab, data_view_tab = st.tabs(["file_stats", "load_audits", "data_view"])
 
     with file_stats_tab:
@@ -135,9 +159,15 @@ def build_ui():
         spdf3 = get_files_staged(data_file)
         st.dataframe(spdf3 ,use_container_width=True)
 
-
-
+    with data_view_tab:
+        st.header("Data View")
         
+        spdf = get_segments_stats(data_file)
+        st.dataframe(spdf)
+
+        st.write('## DAG sample rows from negotiation arrangments')
+        spdf32 = get_segments_chunks_sample(data_file)
+        st.dataframe(spdf32 ,use_container_width=True)        
 
 
 # ----------------------------
@@ -158,6 +188,4 @@ if __name__ == "__main__":
 
 
 
-# select * from negotiated_rates_segment_stats_v;
-# select * from negotiated_rates_segment_info_v;
 
