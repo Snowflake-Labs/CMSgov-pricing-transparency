@@ -336,6 +336,9 @@ def main(p_session: Session
             ret['EOF_Reached'] = eof_reached
             ret['last_seg_no'] = last_seg_no
         
+        if (eof_reached == True) and (stored_segment_count == 0):
+            ret['segments_outof_range'] = True
+
     else:
         ret['task_ignored_parsing'] = True
         ret['task_parsing_ignore_message'] = f'The segment range is greater than the total segments {total_no_of_segments} in the file, hence ignore further parsing'

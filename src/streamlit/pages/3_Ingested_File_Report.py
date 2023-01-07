@@ -58,6 +58,52 @@ def get_fileheader_info(p_data_file):
     '''
     return sp_session.sql(sql_stmt)
 
+def get_segments_loaded_stats(p_data_file):
+    sql_stmt = f'''
+        select
+            r.data_file 
+            ,r.header:total_segments::int as total_segments_in_file 
+            ,sum(task_ret_status:stored_segment_count)::int as stored_segment_count_for_file
+            ,total_segments_in_file - stored_segment_count_for_file as countof_segments_not_loaded
+        from segment_task_execution_status as l
+            join in_network_rates_file_header as r
+                on r.data_file = l.data_file
+        where not (task_name like any ('DAG_ROOT_%' ,'TERM_%' ,'%_FH_%')) 
+            and l.data_file = '{p_data_file}'
+        group by r.data_file ,total_segments_in_file
+    '''
+    return sp_session.sql(sql_stmt)
+
+def get_tasks_ingestion_stats(p_data_file):
+    sql_stmt = f'''
+        select 
+            task_name
+            ,timestampdiff('minutes' ,start_time ,end_time) as elapsed_minutes
+            ,task_ret_status:start_rec_num::int as start_rec_num
+            ,task_ret_status:end_rec_num::int as end_rec_num
+            ,task_ret_status:last_seg_no::int as last_seg_no
+            ,task_ret_status:stored_segment_count::int as stored_segment_count
+            ,task_ret_status:EOF_Reached::boolean as EOF_Reached
+            ,task_ret_status:segments_outof_range::boolean as segments_outof_range
+            ,task_ret_status:task_ignored_parsing::boolean as task_ignored_parsing
+        from segment_task_execution_status
+        where not (task_name like any ('DAG_ROOT_%' ,'TERM_%' ,'%_FH_%')) 
+            and data_file = '{p_data_file}'
+        order by start_rec_num ,EOF_Reached 
+    '''
+    return sp_session.sql(sql_stmt)
+
+def get_files_staged(p_data_file):
+    sql_stmt = f'''
+        select relative_path ,size
+        from directory(@ext_data_stg) as l
+            join in_network_rates_file_header as r
+                on contains(l.relative_path ,r.data_file_basename) = True
+        where r.data_file = '{p_data_file}'
+        limit 5
+    '''
+    return sp_session.sql(sql_stmt)
+
 data_file = ''
 data_files = []
 def build_ui():
@@ -75,6 +121,24 @@ def build_ui():
         spdf = get_fileheader_info(data_file)
         st.dataframe(spdf)
 
+    with load_audits_tab:
+        st.header("Audits")
+        
+        spdf = get_segments_loaded_stats(data_file)
+        st.dataframe(spdf)
+
+        st.write('## DAG Tasks ingestion status detail')
+        spdf2 = get_tasks_ingestion_stats(data_file)
+        st.dataframe(spdf2 ,use_container_width=True)
+
+        st.write('## DAG sample list of files staged')
+        spdf3 = get_files_staged(data_file)
+        st.dataframe(spdf3 ,use_container_width=True)
+
+
+
+        
+
 
 # ----------------------------
 if __name__ == "__main__":
@@ -91,28 +155,8 @@ if __name__ == "__main__":
 
 
 
-# select 
-#     sum(task_ret_status:stored_segment_count) as stored_segment_count_for_file
-# from segment_task_execution_status
-# where not (task_name like any ('DAG_ROOT_%' ,'TERM_%' ,'%_FH_%')) 
-#     and data_file = 'reduced_sample_data.json' --'2022_10_01_priority_health_HMO_in-network-rates.zip'
-
-# ;
 
 
-# select 
-#     task_name
-#     ,timestampdiff('minutes' ,start_time ,end_time) as elapsed_minutes
-#     ,task_ret_status:start_rec_num::int as start_rec_num
-#     ,task_ret_status:end_rec_num::int as end_rec_num
-#     ,task_ret_status:last_seg_no::int as last_seg_no
-#     ,task_ret_status:stored_segment_count::int as stored_segment_count
-#     ,task_ret_status:EOF_Reached::boolean as EOF_Reached
-# from segment_task_execution_status
-# where not (task_name like any ('DAG_ROOT_%' ,'TERM_%' ,'%_FH_%')) 
-#     and data_file = 'reduced_sample_data.json' --'2022_10_01_priority_health_HMO_in-network-rates.zip'
-# order by start_rec_num
-# ;
 
 # select * from negotiated_rates_segment_stats_v;
 # select * from negotiated_rates_segment_info_v;
