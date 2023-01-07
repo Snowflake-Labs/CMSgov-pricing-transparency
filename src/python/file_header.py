@@ -18,13 +18,12 @@ from sp_commons import *
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger("file_header")
 
-def save_header(p_session: Session ,p_fl_header):
-
-    
+def save_header(p_session: Session ,p_data_file ,p_fl_header):
     batch_records = []
     batch_records.append(p_fl_header)
     df = pd.DataFrame(batch_records)
     sp_df = get_snowpark_dataframe(p_session ,df)
+    
     
     target_table = p_session.table('in_network_rates_file_header')
     merged_df = target_table.merge(sp_df
@@ -32,6 +31,8 @@ def save_header(p_session: Session ,p_fl_header):
         ,[
           F.when_not_matched().insert({
             'DATA_FILE': sp_df['DATA_FILE']
+            ,'DATA_FILE_BASENAME': get_basename_of_datafile(p_data_file)
+            ,'CLEANSED_DATA_FILE_BASENAME': get_cleansed_file_basename(p_data_file)
             ,'HEADER': p_fl_header
             })
         ])
@@ -49,8 +50,8 @@ def parse_header_elements(p_session: Session
     #             if ((event != 'string') or ('in_network' not in prefix) or ( value is not None)) and (len(prefix) > 1) }
 
     l_fl_header['DATA_FILE'] = p_datafile
-
-    segments_count = -1
+    
+    segments_count = 0
 
     for prefix, event, value in parser:
         if (event != 'string'):
@@ -111,7 +112,7 @@ def main(p_session: Session
     
     l_fl_header = parse_breakdown_save_wrapper(p_session 
         ,p_stage_path ,p_datafile)
-    save_header(p_session ,l_fl_header)
+    save_header(p_session ,p_datafile ,l_fl_header)
     
     end = datetime.datetime.now()
     elapsed = (end - start)

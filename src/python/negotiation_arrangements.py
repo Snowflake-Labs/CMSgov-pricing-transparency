@@ -175,21 +175,20 @@ def parse_breakdown_save(p_session: Session
     out_folder = os.path.join('/tmp', datafl_basename)
    
     eof_reached = True
-    seq_no = -1
-    stored_segment_count = -1
+    segment_idx = 0
+    stored_segment_idx = 0
     for rec in ijson.items(f, 'in_network.item' ,use_float=True):
-        seq_no += 1
+        segment_idx += 1
 
         # This ensures that we are parsing specifically a range of segments
         # that are within the range. Ignoring any segments that are not part
         # of the range band.
-        if seq_no < p_from_seg:
+        if segment_idx < p_from_seg:
             continue
-        elif (seq_no > p_to_seg + 2):
+        elif (segment_idx > p_to_seg + 2):
             eof_reached = False
             break
 
-        
         # For the header elements, ignore the repeated child elements. We
         # do this by making a deep copy of the semgenet and removing the 
         # repeateable childrens.
@@ -201,7 +200,7 @@ def parse_breakdown_save(p_session: Session
         # get a unique identifier that will form as the segment identifier
         l_segment_id = get_segment_id(rec)
         
-        innetwork_hdr['SEQ_NO'] = seq_no
+        innetwork_hdr['SEQ_NO'] = segment_idx
         innetwork_hdr['DATA_FILE'] = p_datafile
         innetwork_hdr['SEGMENT_ID'] = l_segment_id
 
@@ -211,14 +210,14 @@ def parse_breakdown_save(p_session: Session
                 # ignore if they are not present in the input
                 continue
 
-            parse_save_segment_children(seq_no ,l_segment_id ,out_folder 
+            parse_save_segment_children(segment_idx ,l_segment_id ,out_folder 
                 ,children_type ,innetwork_hdr ,rec)
 
         upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename)
         shutil.rmtree(out_folder)
 
         save_header(p_session ,innetwork_hdr ,rec)
-        stored_segment_count += 1
+        stored_segment_idx += 1
         
     #upload any residual
     upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename)
@@ -226,13 +225,14 @@ def parse_breakdown_save(p_session: Session
     shutil.rmtree(out_folder, ignore_errors=True)
 
     # p_session.sql(f'alter stage {p_target_stage} refresh; ').collect()
-    return (seq_no ,eof_reached ,stored_segment_count)
+    return (segment_idx ,eof_reached ,stored_segment_idx)
 
 def parse_breakdown_save_wrapper(p_session: Session 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
     ,p_from_seg: int ,p_to_seg: int ):
     logger.info('Parsing and breaking down in_network ...')
-    rec_count = -1
+    iterated_segments = -1
+    stored_segment_count = -1
     eof_reached = True
     parsing_error = ''
     json_fl = f'@{p_stage_path}/{p_datafile}'
@@ -240,7 +240,7 @@ def parse_breakdown_save_wrapper(p_session: Session
     rdata = ''
     if json_fl.endswith('.json'):
         with _snowflake.open(json_fl) as f:
-            rec_count ,eof_reached = parse_breakdown_save(p_session 
+            iterated_segments ,eof_reached ,stored_segment_count = parse_breakdown_save(p_session 
                 ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)
 
@@ -261,7 +261,7 @@ def parse_breakdown_save_wrapper(p_session: Session
 
     elif json_fl.endswith('.gz'):
         with gzip.open(_snowflake.open(json_fl),'r') as f:
-            rec_count ,eof_reached = parse_breakdown_save(p_session 
+            iterated_segments ,eof_reached ,stored_segment_count = parse_breakdown_save(p_session 
                 ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)   
 
@@ -269,14 +269,14 @@ def parse_breakdown_save_wrapper(p_session: Session
         with ZipFile(_snowflake.open(json_fl)) as zf:
             for file in zf.namelist():
                 with zf.open(file) as f:
-                    rec_count ,eof_reached = parse_breakdown_save(p_session 
+                    iterated_segments ,eof_reached ,stored_segment_count = parse_breakdown_save(p_session 
                         ,p_stage_path ,p_datafile ,p_target_stage 
                         ,p_from_seg ,p_to_seg ,f)
 
     else:
         raise Exception(f'input file is of unknown compression format {p_datafile}')
     
-    return rec_count ,eof_reached ,parsing_error
+    return iterated_segments ,eof_reached ,stored_segment_count ,parsing_error
 
 def should_proceed_with_parsing(p_session: Session ,p_datafile: str ,p_from_seg: int ,p_to_seg: int):
 
@@ -298,8 +298,7 @@ def should_proceed_with_parsing(p_session: Session ,p_datafile: str ,p_from_seg:
     #if no record is present in the view, then proceed
     row_count = len(df)
     should_proceed_processing = (row_count < 1)
-    # total_no_of_segments = df['TOTAL_NO_OF_SEGMENTS'][0] if row_count >= 1  else -1
-    total_no_of_segments = -2 if row_count >= 1  else -1
+    total_no_of_segments = df['TOTAL_NO_OF_SEGMENTS'][0] if row_count >= 1  else -1
 
     return (total_no_of_segments ,should_proceed_processing)
     
@@ -323,13 +322,20 @@ def main(p_session: Session
     total_no_of_segments ,should_proceed_processing = should_proceed_with_parsing(p_session ,p_datafile ,p_from_seg ,p_to_seg)
     
     if(should_proceed_processing == True):
-        last_seg_no ,eof_reached ,parsing_error = parse_breakdown_save_wrapper(p_session 
+        # ret['task_ignored_parsing'] = False
+
+        last_seg_no ,eof_reached ,stored_segment_count ,parsing_error = parse_breakdown_save_wrapper(p_session 
             ,p_stage_path ,p_datafile ,p_target_stage
             ,p_from_seg ,p_to_seg)
-        ret['Parsing_error'] = parsing_error
-        ret['last_seg_no'] = last_seg_no
-        ret['EOF_Reached'] = eof_reached
-        ret['task_ignored_parsing'] = False
+        ret['stored_segment_count'] = stored_segment_count
+
+        if len(parsing_error) > 0:
+            ret['Parsing_error'] = parsing_error
+
+        if eof_reached == True:
+            ret['EOF_Reached'] = eof_reached
+            ret['last_seg_no'] = last_seg_no
+        
     else:
         ret['task_ignored_parsing'] = True
         ret['task_parsing_ignore_message'] = f'The segment range is greater than the total segments {total_no_of_segments} in the file, hence ignore further parsing'

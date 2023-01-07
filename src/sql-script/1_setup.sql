@@ -97,6 +97,8 @@ comment = 'Used for storing header portion of the negotiated arragments'
 
 create or replace transient table in_network_rates_file_header (
     data_file varchar
+    ,data_file_basename varchar
+    ,cleansed_data_file_basename varchar
     ,header variant
     ,inserted_at timestamp default current_timestamp()
 )
@@ -130,3 +132,46 @@ from segment_task_execution_status as l
         on r.data_file = l.data_file
             and contains( lower(l.task_name) ,lower(r.assigned_task_name)) = True
 where end_time is null;
+
+
+create or replace view negotiated_rates_segment_stats_v
+comment = 'a grouped view of various negotiated rates segment in a file and thier sub-ordinate record count'
+as
+select 
+    p_data_fl as data_fl_basename
+    ,p_negotiation_arrangement 
+    ,p_billing_code_type ,p_billing_code ,p_billing_code_type_version 
+    ,value:DATA_FILE::varchar as data_file
+    ,value:name::varchar as name
+    ,value:SEQ_NO::int as segment_idx
+    ,sum(ARRAY_SIZE(value:NEGOTIATED_RATES)) as segement_record_count
+from ext_negotiated_arrangments_staged
+where p_segment_type = 'negotiated_rates'
+group by 
+    p_data_fl ,data_file
+    ,p_negotiation_arrangement 
+    ,p_billing_code_type ,p_billing_code ,p_billing_code_type_version 
+    ,name
+    ,segment_idx
+;
+
+create or replace view negotiated_rates_segment_info_v
+comment = 'a flattened view of various negotiated rates segment in a file and thier sub-ordinate record count'
+as
+select 
+    p_data_fl as data_fl_basename
+    ,t.value:DATA_FILE::varchar as data_file
+    ,p_negotiation_arrangement 
+    ,p_billing_code_type 
+    ,p_billing_code 
+    ,p_billing_code_type_version 
+    ,p_segment_type
+    ,t.value:SEQ_NO::int as segment_idx
+    ,t.value:name::varchar as name
+    ,t.value:description::varchar as description
+    ,nr.value:negotiated_prices as negotiated_prices
+    ,nr.value:provider_groups as provider_groups
+from ext_negotiated_arrangments_staged as t
+    , lateral flatten (input => t.value:NEGOTIATED_RATES) as nr
+--where p_data_fl = 'reduced_sample_data'
+;

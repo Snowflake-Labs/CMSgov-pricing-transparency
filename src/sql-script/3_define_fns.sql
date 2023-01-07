@@ -5,14 +5,10 @@ use warehouse &SNOW_CONN_warehouse;
 use schema &APP_DB_database.public;
 
 -- =========================
-PUT file://./src/python/sp_commons.py @lib_stg/scripts 
-    auto_compress = false
-    overwrite = true;
+PUT file://./src/python/sp_commons.py @lib_stg/scripts overwrite = true;
 
 -- =========================
-PUT file://./src/python/file_header.py @lib_stg/scripts 
-    auto_compress = false
-    overwrite = true;
+PUT file://./src/python/file_header.py @lib_stg/scripts overwrite = true;
 
 create or replace procedure parse_file_header(
         stage_path varchar ,staged_data_flname varchar)
@@ -29,9 +25,7 @@ create or replace procedure parse_file_header(
 -- call parse_file_header( 'data_stg/data','2022_10_01_priority_health_HMO_in-network-rates.zip');
 
 -- =========================
-PUT file://./src/python/negotiation_arrangements.py @lib_stg/scripts 
-    auto_compress = false
-    overwrite = true;
+PUT file://./src/python/negotiation_arrangements.py @lib_stg/scripts overwrite = true;
 
 create or replace procedure parse_negotiation_arrangement_segments(
         stage_path varchar ,staged_data_flname varchar ,target_stage_and_path varchar
@@ -49,9 +43,7 @@ create or replace procedure parse_negotiation_arrangement_segments(
 -- call parse_negotiation_arrangement_segments( 'data_stg/data','2022_10_01_priority_health_HMO_in-network-rates.zip','@ext_data_stg/raw_parsed' ,0 ,200)
 
 -- =========================
-PUT file://./src/python/in_network_rates_dagbuilder.py @lib_stg/scripts 
-    auto_compress = false
-    overwrite = true;
+PUT file://./src/python/in_network_rates_dagbuilder.py @lib_stg/scripts overwrite = true;
 
 create or replace procedure in_network_rates_dagbuilder(
         stage_path varchar ,staged_data_flname varchar ,target_stage_and_path varchar
@@ -79,3 +71,20 @@ create or replace procedure delete_dag_for_datafile(staged_data_flname varchar)
         ,'@lib_stg/scripts/sp_commons.py')
     handler = 'delete_dag_for_datafile.main'
 ;
+
+-- =========================
+create or replace function get_basename_of_datafile(p_datafile varchar)
+returns varchar
+language python
+runtime_version = 3.8
+handler = 'main'
+as $$
+import os
+
+def main(p_datafile:str) -> str:
+    base = os.path.basename(p_datafile)
+    fl_base = os.path.splitext(base)
+    return fl_base[0]
+$$;
+
+select get_basename_of_datafile('2022_10_01_priority_health_HMO_in-network-rates.zip');

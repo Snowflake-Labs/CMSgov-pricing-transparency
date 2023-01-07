@@ -3,5 +3,5 @@
 # Purpose: Utility script to run the streamlit app
 #
 
-streamlit run ./src/streamlit/Home.py
+streamlit run ./src/streamlit/1_🛖_Home.py
 

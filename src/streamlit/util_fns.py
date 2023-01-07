@@ -15,13 +15,16 @@ import sflk_base as L
 
 logger = logging.getLogger('app')
 
-def exec_sql_script(p_sqlscript: str ,p_component) -> bool:
+def exec_sql_script(p_sqlscript: str ,p_cache_id) -> bool:
     '''
         Executes a sql script and writes the output to a textbox.
     '''
     script_executed = False
     logger.info(f'Executing sql script: {p_sqlscript} ...')
     
+    # Capture script output.
+    script_output = []
+
     process = subprocess.Popen(
         ['./bin/exec_sqlscript.sh'
         ,p_sqlscript]
@@ -30,20 +33,27 @@ def exec_sql_script(p_sqlscript: str ,p_component) -> bool:
 
     while True:
         output = process.stdout.readline()
-        st.write(output)
+        # st.write(output)
+        script_output.append(output)
         return_code = process.poll()
         
         if return_code is not None:
-            st.write(f'RETURN CODE: {return_code} \n')
+            # st.write(f'RETURN CODE: {return_code} \n')
+            script_output.append(f'RETURN CODE: {return_code} \n')
             script_executed = True
 
             # Process has finished, read rest of the output 
             for output in process.stdout.readlines():
-                st.write(output)
+                # st.write(output)
+                script_output.append(output)
 
             break
 
-    st.write('\n --- Finished executing script ---')
+    script_output.append('\n --- Finished executing script ---')
+    if 'output' not in st.session_state:
+        # Write the Script Output to the Session.
+        st.session_state[p_cache_id] = script_output
+
     return script_executed
 
 
