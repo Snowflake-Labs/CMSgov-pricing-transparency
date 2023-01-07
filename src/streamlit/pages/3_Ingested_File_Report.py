@@ -58,19 +58,40 @@ def get_fileheader_info(p_data_file):
     '''
     return sp_session.sql(sql_stmt)
 
-def get_segments_loaded_stats(p_data_file):
+def get_file_ingestion_elapsed(p_data_file):
     sql_stmt = f'''
-        select
-            r.data_file 
-            ,r.header:total_segments::int as total_segments_in_file 
-            ,sum(task_ret_status:stored_segment_count)::int as stored_segment_count_for_file
-            ,total_segments_in_file - stored_segment_count_for_file as countof_segments_not_loaded
-        from segment_task_execution_status as l
-            join in_network_rates_file_header as r
+            select *
+            from file_ingestion_elapsed_v as l
+            where l.data_file = '{p_data_file}'
+        '''
+    return sp_session.sql(sql_stmt)
+
+
+def get_segments_loaded_stats(p_data_file):
+    sp_session.sql('alter stage ext_data_stg refresh;').collect()
+
+    sql_stmt = f'''
+        with base as (
+            select
+                r.data_file
+                ,r.header:total_segments::int as total_segments_in_file
+                -- ,split_part(d.relative_path,'/',3) as segment
+                ,count( distinct split_part(d.relative_path,'/',3)) as segment_count
+            from directory(@ext_data_stg) as d
+                join in_network_rates_file_header as r
+                    on split_part(d.relative_path,'/',2) = r.data_file_basename
+            where d.relative_path like 'raw_parsed/%'
+            group by data_file ,total_segments_in_file
+        )
+        select 
+            l.data_file ,l.total_segments_in_file ,l.segment_count
+            ,sum(r.task_ret_status:stored_segment_count)::int as segments_stored_by_task
+        from base as l
+            join segment_task_execution_status as r
                 on r.data_file = l.data_file
-        where not (task_name like any ('DAG_ROOT_%' ,'TERM_%' ,'%_FH_%')) 
+        where r.task_ret_status:stored_segment_count is not null
             and l.data_file = '{p_data_file}'
-        group by r.data_file ,total_segments_in_file
+        group by  l.data_file ,l.total_segments_in_file ,l.segment_count
     '''
     return sp_session.sql(sql_stmt)
 
@@ -99,7 +120,7 @@ def get_files_staged(p_data_file):
         from directory(@ext_data_stg) as l
             join in_network_rates_file_header as r
                 on contains(l.relative_path ,r.data_file_basename) = True
-        where r.data_file = '{p_data_file}'
+        where r.data_file =  '{p_data_file}'
         limit 5
     '''
     return sp_session.sql(sql_stmt)
@@ -148,6 +169,7 @@ def build_ui():
     with load_audits_tab:
         st.header("Audits")
         
+        st.write('## Loaded segment stats')
         spdf = get_segments_loaded_stats(data_file)
         st.dataframe(spdf)
 
@@ -158,6 +180,10 @@ def build_ui():
         st.write('## DAG sample list of files staged')
         spdf3 = get_files_staged(data_file)
         st.dataframe(spdf3 ,use_container_width=True)
+
+        st.write('## Time taken for ingestion')
+        spdf = get_file_ingestion_elapsed(data_file)
+        st.dataframe(spdf)
 
     with data_view_tab:
         st.header("Data View")

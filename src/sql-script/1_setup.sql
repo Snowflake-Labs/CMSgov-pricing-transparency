@@ -132,3 +132,22 @@ from segment_task_execution_status as l
         on r.data_file = l.data_file
             and contains( lower(l.task_name) ,lower(r.assigned_task_name)) = True
 where end_time is null;
+
+
+create or replace view file_ingestion_elapsed_v
+comment = 'shows the time taken for ingesting of file'
+as
+select * from (
+    with base as (
+        select 
+            data_file
+            ,min(start_time) as start_time 
+            ,max( nvl(end_time ,current_timestamp())) as end_time
+        from segment_task_execution_status
+        group by data_file 
+    )
+    select *
+        ,timestampdiff('minutes' ,l.start_time ,l.end_time) as elapsed_minutes
+    from base as l
+);
+    

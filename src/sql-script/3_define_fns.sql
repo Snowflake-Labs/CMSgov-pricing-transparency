@@ -73,18 +73,3 @@ create or replace procedure delete_dag_for_datafile(staged_data_flname varchar)
 ;
 
 -- =========================
-create or replace function get_basename_of_datafile(p_datafile varchar)
-returns varchar
-language python
-runtime_version = 3.8
-handler = 'main'
-as $$
-import os
-
-def main(p_datafile:str) -> str:
-    base = os.path.basename(p_datafile)
-    fl_base = os.path.splitext(base)
-    return fl_base[0]
-$$;
-
-select get_basename_of_datafile('2022_10_01_priority_health_HMO_in-network-rates.zip');
