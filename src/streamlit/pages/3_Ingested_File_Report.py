@@ -188,10 +188,11 @@ def build_ui():
     with data_view_tab:
         st.header("Data View")
         
+        st.write('## Negotiation Arrangments headers')
         spdf = get_segments_stats(data_file)
         st.dataframe(spdf)
 
-        st.write('## DAG sample rows from negotiation arrangments')
+        st.write('## Sample rows from negotiation arrangments')
         spdf32 = get_segments_chunks_sample(data_file)
         st.dataframe(spdf32 ,use_container_width=True)        
 

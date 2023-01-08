@@ -322,8 +322,7 @@ def main(p_session: Session
     total_no_of_segments ,should_proceed_processing = should_proceed_with_parsing(p_session ,p_datafile ,p_from_seg ,p_to_seg)
     
     if(should_proceed_processing == True):
-        # ret['task_ignored_parsing'] = False
-
+        
         last_seg_no ,eof_reached ,stored_segment_count ,parsing_error = parse_breakdown_save_wrapper(p_session 
             ,p_stage_path ,p_datafile ,p_target_stage
             ,p_from_seg ,p_to_seg)

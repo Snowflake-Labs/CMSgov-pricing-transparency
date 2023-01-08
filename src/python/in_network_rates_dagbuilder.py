@@ -213,7 +213,7 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
     return line_end_tasks
 
 def create_term_tasks(p_session: Session ,p_datafile: str
-    ,p_warehouse: str ,p_root_task_name: str  ,p_line_end_task_lists:List[str] ,p_task_lists:List[str]):
+    ,p_warehouse: str ,p_root_task_name: str ,p_line_end_task_lists:List[str] ,p_task_lists:List[str]):
     logger.info(f'Creating the task ddl ...')
 
     fl_basename = get_cleansed_file_basename(p_datafile)
@@ -221,7 +221,10 @@ def create_term_tasks(p_session: Session ,p_datafile: str
     
     after_tasks_phrase = ','.join(p_line_end_task_lists)
     task_stmts = []
-    for task_name in p_task_lists:
+
+    # merge two list and remove any duplicates between the list
+    tasks_to_terminate = list(set(p_task_lists) | set(p_line_end_task_lists)) 
+    for task_name in tasks_to_terminate:
         task_stmts.append(f''' alter task if exists  {task_name} suspend; ''')
         task_stmts.append(f''' drop task if exists  {task_name}; ''')
     
@@ -278,7 +281,7 @@ def main(p_session: Session
         ,p_warehouse ,task_list)
     line_end_tasks = np.append(line_end_tasks ,[fh_task_name])
     line_end_tasks = line_end_tasks.tolist()
-
+    
     # create term task
     term_task_name = create_term_tasks(p_session ,p_datafile ,p_warehouse ,root_task_name ,line_end_tasks ,task_list)
     ret['term_task'] = term_task_name
