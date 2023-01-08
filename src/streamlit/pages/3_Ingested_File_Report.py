@@ -96,6 +96,15 @@ def get_segments_loaded_stats(p_data_file):
     '''
     return sp_session.sql(sql_stmt)
 
+def get_total_tasks_count(p_data_file):
+    sql_stmt = f'''
+        select count(*) as task_count
+        from task_to_segmentids
+        where data_file = '{p_data_file}'
+        ;
+    '''
+    return sp_session.sql(sql_stmt)
+
 def get_tasks_ingestion_stats(p_data_file):
     sql_stmt = f'''
         select 
@@ -169,21 +178,31 @@ def build_ui():
         
         st.write('## Loaded segment stats')
 
-
         spdf = get_segments_loaded_stats(data_file)
-        #TODO progress bar for percentage of loading
-        # use total_segments_in_file and segment_count
-        # latest_iteration = st.empty()
-        # bar = st.progress(0)
-        # num = 20
-        # for i in range(num):
-        #     latest_iteration.text(f'{num - i} seconds left')
-        #     bar.progress((100//num)*i)
-        #     time.sleep(1)
+        #progress bar for percentage of loading
+        df = spdf.to_pandas()
+
+        if len(df) > 0:
+            total_segments_in_file = df['TOTAL_SEGMENTS_IN_FILE'][0]
+            segment_count = df['SEGMENT_COUNT'][0]
+            percentage_loaded = float( (segment_count/total_segments_in_file)*100 )
+            st.text(f'Percentage of files loaded: {percentage_loaded}')
+            st.progress(percentage_loaded/100)
         st.dataframe(spdf)
 
-        st.write('## DAG Tasks ingestion status detail')
+        st.write('## Tasks ingestion status detail')
+        #progress bar for tasks still running
+        
         spdf2 = get_tasks_ingestion_stats(data_file)
+        executing_task_count = len( spdf2.to_pandas() )
+
+        if executing_task_count > 0:
+            task_count_df = get_total_tasks_count(data_file).to_pandas()
+            total_task_count = task_count_df['TASK_COUNT'][0]
+            task_execution_percentage = float( (executing_task_count/total_task_count)*100 )
+            st.text(f'Percentage of tasks completed: {task_execution_percentage}')
+            st.progress(task_execution_percentage/100)
+
         st.dataframe(spdf2 ,use_container_width=True)
 
         st.write('## Sample list of files staged')
