@@ -35,6 +35,9 @@ def save_header(p_session: Session ,p_data_file ,p_fl_header):
             ,'CLEANSED_DATA_FILE_BASENAME': get_cleansed_file_basename(p_data_file)
             ,'HEADER': p_fl_header
             })
+         ,F.when_matched().update({
+            'HEADER': p_fl_header
+            }), 
         ])
 
     return merged_df
@@ -46,11 +49,6 @@ def parse_header_elements(p_session: Session
     
     l_fl_header = {}
     parser = ijson.parse(f)
-    # l_fl_header = { prefix:value for prefix, event, value in parser
-    #             if ((event != 'string') or ('in_network' not in prefix) or ( value is not None)) and (len(prefix) > 1) }
-
-    l_fl_header['DATA_FILE'] = p_datafile
-    
     segments_count = 0
 
     for prefix, event, value in parser:
@@ -103,13 +101,16 @@ def parse_breakdown_save_wrapper(p_session: Session
 
 def main(p_session: Session 
     ,p_stage_path: str ,p_datafile: str):
-    
+    l_fl_header = {}
     ret = {}
     ret['data_file'] = p_datafile
 
     start = datetime.datetime.now()
     report_execution_status(p_session ,p_datafile ,ret)
     
+    l_fl_header['status'] = 'processing'
+    save_header(p_session ,p_datafile ,l_fl_header)
+
     l_fl_header = parse_breakdown_save_wrapper(p_session 
         ,p_stage_path ,p_datafile)
     save_header(p_session ,p_datafile ,l_fl_header)

@@ -220,7 +220,7 @@ def build_ui():
         spdf = get_segments_stats(data_file)
         st.dataframe(spdf)
 
-        st.write('## Sample rows from negotiation arrangments')
+        st.write('## Sample rows from negotiation arrangements')
         spdf32 = get_segments_chunks_sample(data_file)
         st.dataframe(spdf32 ,use_container_width=True)        
 

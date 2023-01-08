@@ -19,6 +19,7 @@ def get_cleansed_file_basename(p_datafile):
     #fl_name = fl_basename.replace('-','_')
     # Replace all non alphanumeric characters with _
     fl_name = re.sub('[^0-9a-zA-Z]+', '_', fl_basename)
+    # fl_name = fl_name.replace('json' ,'')
     return fl_name
     
 def get_snowpark_dataframe(p_session: Session ,p_df: pd.DataFrame):
