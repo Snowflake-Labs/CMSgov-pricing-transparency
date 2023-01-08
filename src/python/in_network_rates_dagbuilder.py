@@ -95,7 +95,7 @@ def save_tasks_to_segments(p_datafile: str ,p_segments_per_task: int):
         # In case this is the last split, since we are splitting rather naively
         # we need to ensure the last tasks parses till end of file and not based 
         # on the split index
-        to_idx = n if idx >= is_last_split else 999999999
+        to_idx = n if idx < is_last_split else 999999999
 
         task_name = f'''T_{fl_basename}_{m}_{to_idx}'''
         segment_count = (to_idx - m)

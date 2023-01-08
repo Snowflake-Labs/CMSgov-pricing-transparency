@@ -46,9 +46,9 @@ def cache_ingested_data_files():
 def get_fileheader_info(p_data_file):
     sql_stmt = f'''
         select
-            data_file
-            ,data_file_basename
-            ,inserted_at
+            -- data_file
+            -- ,data_file_basename
+            inserted_at
             ,header:last_updated_on::date as last_updated_on
             ,header:reporting_entity_name::varchar as reporting_entity_name
             ,header:reporting_entity_type::varchar as reporting_entity_type
@@ -60,7 +60,7 @@ def get_fileheader_info(p_data_file):
 
 def get_file_ingestion_elapsed(p_data_file):
     sql_stmt = f'''
-            select *
+            select * exclude(data_file)
             from file_ingestion_elapsed_v as l
             where l.data_file = '{p_data_file}'
         '''
@@ -84,7 +84,8 @@ def get_segments_loaded_stats(p_data_file):
             group by data_file ,total_segments_in_file
         )
         select 
-            l.data_file ,l.total_segments_in_file ,l.segment_count
+            -- l.data_file ,
+            l.total_segments_in_file ,l.segment_count
             ,sum(r.task_ret_status:stored_segment_count)::int as segments_stored_by_task
         from base as l
             join segment_task_execution_status as r
@@ -177,7 +178,7 @@ def build_ui():
         spdf2 = get_tasks_ingestion_stats(data_file)
         st.dataframe(spdf2 ,use_container_width=True)
 
-        st.write('## DAG sample list of files staged')
+        st.write('## Sample list of files staged')
         spdf3 = get_files_staged(data_file)
         st.dataframe(spdf3 ,use_container_width=True)
 
