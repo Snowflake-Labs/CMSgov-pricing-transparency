@@ -308,6 +308,9 @@ def main(p_session: Session
     
     ret = {}
     ret['data_file'] = p_datafile
+    ret['data_file_basename'] = get_basename_of_datafile(p_datafile)
+    ret['cleansed_data_file_basename'] = get_cleansed_file_basename(p_datafile)
+
     ret['start_rec_num'] = p_from_seg
     ret['end_rec_num'] = p_to_seg
 

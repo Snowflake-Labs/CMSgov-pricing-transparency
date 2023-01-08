@@ -74,13 +74,6 @@ def split_range_into_buckets(p_items_per_bucket, p_num_buckets):
         round(step*i)+1 if i >= 1 else 0
         ,round(step*(i+1))) for i in range(p_num_buckets)]
 
-def get_cleansed_file_basename(p_datafile):
-    fl_basename = get_basename_of_datafile(p_datafile)
-    #fl_name = fl_basename.replace('-','_')
-    # Replace all non alphanumeric characters with _
-    fl_name = re.sub('[^0-9a-zA-Z]+', '_', fl_basename)
-    return fl_name
-
 def get_task_name(p_fl_basename ,p_m ,p_n):
     fl_name = get_cleansed_file_basename(p_fl_basename)
     return f'''T_{fl_name}_{p_m}_{p_n}'''
@@ -96,9 +89,16 @@ def save_tasks_to_segments(p_datafile: str ,p_segments_per_task: int):
     #task_matrix_shape = reshape_buckets_to_matrix(splits ,parallel_rows)
     #print(task_matrix_shape)
 
+    is_last_split = len(splits) - 1
     for idx,(m ,n) in enumerate(splits):
-        task_name = f'''T_{fl_basename}_{m}_{n}'''
-        segment_count = (n - m)
+
+        # In case this is the last split, since we are splitting rather naively
+        # we need to ensure the last tasks parses till end of file and not based 
+        # on the split index
+        to_idx = n if idx >= is_last_split else 999999999
+
+        task_name = f'''T_{fl_basename}_{m}_{to_idx}'''
+        segment_count = (to_idx - m)
         
         r = {}
         r['BUCKET'] = idx
@@ -106,7 +106,7 @@ def save_tasks_to_segments(p_datafile: str ,p_segments_per_task: int):
         r['ASSIGNED_TASK_NAME'] = task_name
         r['SEGMENTS_RECORD_COUNT'] = segment_count
         r['FROM_IDX'] = m
-        r['TO_IDX'] = n
+        r['TO_IDX'] = to_idx
 
         rows.append(r)
     
