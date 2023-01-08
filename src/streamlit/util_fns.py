@@ -61,13 +61,14 @@ def load_sample_and_display_table(p_session: Session ,p_table: str ,p_sample_row
     '''
     Utility function to display sample records 
     '''
-    st.write('sampling target table ...')
+    st.write(f'sampling target table {p_table} ...')
     tbl_df = (p_session
         .table(p_table)
         .sample(n=p_sample_rowcount)
         .to_pandas())
 
-    st.dataframe(tbl_df)
+    st.dataframe(tbl_df ,use_container_width=True)
+    st.write(f'')
 
 def list_stage(p_session: Session ,p_stage :str):
     '''

@@ -138,15 +138,12 @@ def get_segments_stats(p_data_file):
 def get_segments_chunks_sample(p_data_file):
     sql_stmt = f'''
         select 
-            * exclude(data_file)
+            * exclude(data_file ,data_fl_basename)
         from negotiated_rates_segment_info_v
         where data_file = '{p_data_file}'
         limit 5
     '''
     return sp_session.sql(sql_stmt)
-# select * from negotiated_rates_segment_info_v;
-
-
 
 data_file = ''
 data_files = []
@@ -171,7 +168,18 @@ def build_ui():
         st.header("Audits")
         
         st.write('## Loaded segment stats')
+
+
         spdf = get_segments_loaded_stats(data_file)
+        #TODO progress bar for percentage of loading
+        # use total_segments_in_file and segment_count
+        # latest_iteration = st.empty()
+        # bar = st.progress(0)
+        # num = 20
+        # for i in range(num):
+        #     latest_iteration.text(f'{num - i} seconds left')
+        #     bar.progress((100//num)*i)
+        #     time.sleep(1)
         st.dataframe(spdf)
 
         st.write('## DAG Tasks ingestion status detail')
