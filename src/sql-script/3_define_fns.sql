@@ -43,6 +43,23 @@ create or replace procedure parse_negotiation_arrangement_segments(
 -- call parse_negotiation_arrangement_segments( 'data_stg/data','2022_10_01_priority_health_HMO_in-network-rates.zip','@ext_data_stg/raw_parsed' ,0 ,200)
 
 -- =========================
+PUT file://./src/python/negotiation_arrangements_header.py @lib_stg/scripts overwrite = true;
+
+create or replace procedure negotiation_arrangements_header(
+        stage_path varchar ,staged_data_flname varchar)
+    returns variant
+    language python
+    runtime_version = '3.8'
+    packages = ('snowflake-snowpark-python' ,'pandas', 'ijson' ,'simplejson')
+    imports = ('@lib_stg/scripts/negotiation_arrangements_header.py' 
+        ,'@lib_stg/scripts/sp_commons.py')
+    handler = 'negotiation_arrangements_header.main'
+;
+
+
+
+
+-- =========================
 PUT file://./src/python/in_network_rates_dagbuilder.py @lib_stg/scripts overwrite = true;
 
 create or replace procedure in_network_rates_dagbuilder(

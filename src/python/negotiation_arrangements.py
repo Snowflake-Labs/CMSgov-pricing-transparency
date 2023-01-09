@@ -318,7 +318,7 @@ def main(p_session: Session
     report_execution_status(p_session ,p_datafile ,ret)
     start = datetime.datetime.now()
     
-    #TODO verify if previously the EOF_Reached flag has been set (table: segment_task_execution_status)
+    # verify if previously the EOF_Reached flag has been set (table: segment_task_execution_status)
     #from other parallel task instances. If it has been set; then proceed only
     #if the current from_seg and to_seg is within the last_seg_no (of that record)
     #otherwise exit out

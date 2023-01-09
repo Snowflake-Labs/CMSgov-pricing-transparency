@@ -282,6 +282,9 @@ def main(p_session: Session
         ,p_stage_path ,p_datafile ,l_warehouses[0])
     ret['root_task'] = root_task_name
 
+    #TODO add negotiatio header parser
+
+
     # # create sub tasks and add to root task
     task_to_segments_df.sort_values(by=['BUCKET'], inplace=True)
     task_list = list(task_to_segments_df.ASSIGNED_TASK_NAME.values)
