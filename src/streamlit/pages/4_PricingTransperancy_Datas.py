@@ -40,8 +40,11 @@ We look at the views & table specific to the pricing transperancy dataset.
 '''
 
 def build_ui():
-    st.write('## Negotiation Arrangments headers')
+    st.write('## Negotiation Arrangments headers_stats')
     U.load_sample_and_display_table(sp_session ,'negotiated_rates_segment_stats_v' ,5)
+
+    st.write('## Negotiation Arrangments headers')
+    U.load_sample_and_display_table(sp_session ,'in_network_rates_segment_header' ,5)
     
     st.write('## Sample rows from negotiation arrangements')
     U.load_sample_and_display_table(sp_session ,'negotiated_rates_segment_info_v' ,5)

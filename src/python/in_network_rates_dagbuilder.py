@@ -184,7 +184,7 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
 
     #warehouse can be one or multiple seperated by ','
     warehouses = p_warehouse.split(',') if (',' in p_warehouse) else [p_warehouse]
-    last_wh_idx = -1
+    last_wh_idx = 0
 
     # We now iterate through the dag matrix and define the tasks
     task_matrix_dag_asarray = task_matrix_dag.flatten()
@@ -275,9 +275,11 @@ def main(p_session: Session
     task_to_segments_df = save_tasks_to_segments(p_datafile ,p_segments_per_task)
     append_to_table(p_session ,task_to_segments_df)
 
+    l_warehouses = p_warehouse.split(',') if (',' in p_warehouse) else [p_warehouse]
+
     # create root task
     root_task_name, fh_task_name = create_root_task_and_fh_loader(p_session  
-        ,p_stage_path ,p_datafile ,p_warehouse)
+        ,p_stage_path ,p_datafile ,l_warehouses[0])
     ret['root_task'] = root_task_name
 
     # # create sub tasks and add to root task
@@ -292,7 +294,7 @@ def main(p_session: Session
     line_end_tasks = line_end_tasks.tolist()
     
     # create term task
-    term_task_name = create_term_tasks(p_session ,p_datafile ,p_warehouse ,root_task_name ,line_end_tasks ,task_list)
+    term_task_name = create_term_tasks(p_session ,p_datafile ,l_warehouses[0] ,root_task_name ,line_end_tasks ,task_list)
     ret['term_task'] = term_task_name
 
     ret['status'] = True
