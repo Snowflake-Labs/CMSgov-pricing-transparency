@@ -225,7 +225,7 @@ def parse_breakdown_save(p_session: Session
     # if Path(out_folder).exists() and Path(out_folder).is_dir():
     shutil.rmtree(out_folder, ignore_errors=True)
 
-    # p_session.sql(f'alter stage {p_target_stage} refresh; ').collect()
+
     return (segment_idx ,eof_reached ,stored_segment_idx)
 
 def parse_breakdown_save_wrapper(p_session: Session 
@@ -303,6 +303,14 @@ def should_proceed_with_parsing(p_session: Session ,p_datafile: str ,p_from_seg:
 
     return (total_no_of_segments ,should_proceed_processing)
     
+def refresh_stages_and_tables(p_session ,p_target_stage):
+    # yes this sometimes takes away some cycles. but needed in larger segment/task
+    # instances like when parsing CIGNA data files of 1TB
+    p_session.sql(f'alter stage {p_target_stage} refresh; ').collect()
+
+    p_session.sql(f'alter external table ext_negotiated_arrangments_staged refresh; ').collect()
+    return 
+
 def main(p_session: Session 
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
     ,p_from_seg: int ,p_to_seg: int):
@@ -345,6 +353,9 @@ def main(p_session: Session
     else:
         ret['task_ignored_parsing'] = True
         ret['task_parsing_ignore_message'] = f'The segment range is greater than the total segments {total_no_of_segments} in the file, hence ignore further parsing'
+    
+
+    refresh_stages_and_tables(p_session ,p_target_stage)
     
     end = datetime.datetime.now()
     elapsed = (end - start)
