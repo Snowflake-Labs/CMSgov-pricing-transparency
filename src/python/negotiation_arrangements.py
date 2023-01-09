@@ -216,7 +216,8 @@ def parse_breakdown_save(p_session: Session
         upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename)
         shutil.rmtree(out_folder)
 
-        save_header(p_session ,innetwork_hdr ,rec)
+        #TODO investigate a better way to save the header info. May be a seperate task on its own 
+        # save_header(p_session ,innetwork_hdr ,rec)
         stored_segment_idx += 1
         
     #upload any residual

@@ -51,6 +51,7 @@ def parse_header_elements(p_session: Session
     parser = ijson.parse(f)
     segments_count = 0
 
+    l_fl_header['DATA_FILE'] = p_datafile
     for prefix, event, value in parser:
         if (event != 'string'):
             continue
@@ -108,6 +109,9 @@ def main(p_session: Session
     start = datetime.datetime.now()
     report_execution_status(p_session ,p_datafile ,ret)
     
+    # save the header before processing, to indicate this is currently under process. 
+    #without this, it will take a long time to see if FH has loaded
+    l_fl_header['DATA_FILE'] = p_datafile
     l_fl_header['status'] = 'processing'
     save_header(p_session ,p_datafile ,l_fl_header)
 

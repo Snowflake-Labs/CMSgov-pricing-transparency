@@ -266,8 +266,8 @@ def main(p_session: Session
     ret = {}
     ret['data_file'] = p_datafile
 
-    if (p_segments_per_task <= 199) or (p_segments_per_task > 2000):
-        raise Exception(f'Try to keep parameter [p_segments_per_task] between 200 and 2000.')
+    if (p_segments_per_task <= 199) or (p_segments_per_task > 20000):
+        raise Exception(f'Try to keep parameter [p_segments_per_task] between 200 and 20000.')
 
     delete_taskdefinitions_for_datafile(p_session ,p_datafile)
 
