@@ -113,15 +113,20 @@ def divide_list_to_chunks(p_list, p_chunk_size):
     for i in range(0, len(p_list), p_chunk_size):
         yield p_list[i:i + p_chunk_size]
 
-def get_segment_id(p_rec):
+def get_segment_id(p_rec ,p_segment_idx):
     negotiation_arrangement = str(p_rec['negotiation_arrangement'])
     billing_code = str(p_rec.get('billing_code' ,'-'))
     billing_code_type = str(p_rec.get('billing_code_type' ,'-'))
     billing_code_type_version = str(p_rec.get('billing_code_type_version' ,'-'))
-    header_id = f'''{negotiation_arrangement}::{billing_code_type}::{billing_code}::{billing_code_type_version}'''
-    header_id = header_id.replace(' ','_').lower()
-    segment_id = header_id
 
+    # providers can all also add customer fields into the header section to make it unique.
+    # ex CIGNA adds derv_tin & type informations
+    keys_to_ignore = REPEATABLE_CHILDREN_SECTIONS + ['name','description','billing_code','billing_code_type','billing_code_type_version','negotiation_arrangement']
+    values_concatted = [ f'{k}={p_rec[k]}' for k in p_rec.keys() if k not in keys_to_ignore]
+    values_concatted = '^'.join(values_concatted)
+
+    segment_id = f'''{negotiation_arrangement}::{billing_code_type}::{billing_code}::{billing_code_type_version}::{p_segment_idx}::{values_concatted}'''
+    segment_id = re.sub('[^0-9a-zA-Z:=]+', '_', segment_id).lower()
     return segment_id
 
 def parse_save_segment_children(p_seq_no: int ,p_segment_id: str ,p_out_folder: str 
@@ -198,7 +203,7 @@ def parse_breakdown_save(p_session: Session
             innetwork_hdr.pop(k, None)
 
         # get a unique identifier that will form as the segment identifier
-        l_segment_id = get_segment_id(rec)
+        l_segment_id = get_segment_id(rec ,segment_idx)
         
         innetwork_hdr['SEQ_NO'] = segment_idx
         innetwork_hdr['DATA_FILE'] = p_datafile

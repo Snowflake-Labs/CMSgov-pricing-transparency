@@ -184,7 +184,7 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
 
     #warehouse can be one or multiple seperated by ','
     warehouses = p_warehouse.split(',') if (',' in p_warehouse) else [p_warehouse]
-    warehouses_spread = warehouses * (DAG_MATRIX_SHAPE[0] * DAG_MATRIX_SHAPE[1])
+    warehouses_spread = warehouses * ((DAG_MATRIX_SHAPE[0] * DAG_MATRIX_SHAPE[1]) + 2)
     wh_idx = 1
 
     # We now iterate through the dag matrix and define the tasks
