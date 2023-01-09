@@ -35,6 +35,7 @@ select
     ,value:CHUNK_NO::int as chunk_no
     ,array_size(value:NEGOTIATED_RATES) as chunk_size
     ,value:NEGOTIATED_RATES as negotiated_rates
+    ,value as segment_chunk_raw
 from ext_negotiated_arrangments_staged as l
     join in_network_rates_file_header as r
         on l.p_data_fl = r.data_file_basename

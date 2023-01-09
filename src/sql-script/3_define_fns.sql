@@ -56,9 +56,6 @@ create or replace procedure negotiation_arrangements_header(
     handler = 'negotiation_arrangements_header.main'
 ;
 
-
-
-
 -- =========================
 PUT file://./src/python/in_network_rates_dagbuilder.py @lib_stg/scripts overwrite = true;
 
@@ -79,7 +76,7 @@ create or replace procedure in_network_rates_dagbuilder(
 -- =========================
 PUT file://./src/python/delete_dag_for_datafile.py @lib_stg/scripts overwrite = true;
 
-create or replace procedure delete_dag_for_datafile(staged_data_flname varchar)
+create or replace procedure delete_dag_for_datafile(staged_data_flname varchar ,drop_task boolean)
     returns variant
     language python
     runtime_version = '3.8'

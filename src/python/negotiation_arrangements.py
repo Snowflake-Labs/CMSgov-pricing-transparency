@@ -354,9 +354,8 @@ def main(p_session: Session
         ret['task_ignored_parsing'] = True
         ret['task_parsing_ignore_message'] = f'The segment range is greater than the total segments {total_no_of_segments} in the file, hence ignore further parsing'
     
-
     refresh_stages_and_tables(p_session ,p_target_stage)
-    
+
     end = datetime.datetime.now()
     elapsed = (end - start)
     ret['elapsed'] =  f'=> {elapsed} '

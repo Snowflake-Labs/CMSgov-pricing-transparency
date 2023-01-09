@@ -18,7 +18,7 @@ USER_TASK_TIMEOUT = 86400000
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 logger = logging.getLogger("delete_dag_for_datafile")
 
-def delete_taskdefinitions_for_datafile(p_session: Session ,p_datafile: str):
+def delete_taskdefinitions_for_datafile(p_session: Session ,p_datafile: str ,p_drop_tasks: bool):
     logger.info(f'Cleaning up tasks that were defined for the data file [{p_datafile}] ...')
 
     fl_basename = get_cleansed_file_basename(p_datafile)
@@ -40,17 +40,19 @@ def delete_taskdefinitions_for_datafile(p_session: Session ,p_datafile: str):
     rows = p_session.sql(stmt).collect()
     for r in rows:
         p_session.sql(f'''alter task if exists {r['TASK_NAME']} suspend;'''  ).collect()
-        p_session.sql(f'''drop task if exists {r['TASK_NAME']};'''  ).collect()
-        tasks_dropped.append(r['TASK_NAME'])
+
+        if (p_drop_tasks == True):
+            p_session.sql(f'''drop task if exists {r['TASK_NAME']};'''  ).collect()
+    tasks_dropped.append(r['TASK_NAME'])
 
     return tasks_dropped
 
-def main(p_session: Session ,p_datafile: str):
+def main(p_session: Session ,p_datafile: str ,p_drop_tasks: bool):
     ret = {}
     ret['data_file'] = p_datafile
 
-    tasks_dropped = delete_taskdefinitions_for_datafile(p_session ,p_datafile)
-    ret['tasks_dropped'] = tasks_dropped
+    tasks_affected = delete_taskdefinitions_for_datafile(p_session ,p_datafile ,p_drop_tasks)
+    ret['tasks_affected'] = tasks_affected
 
     ret['status'] = True
     return ret

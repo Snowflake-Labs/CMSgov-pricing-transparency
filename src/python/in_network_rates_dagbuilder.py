@@ -184,7 +184,8 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
 
     #warehouse can be one or multiple seperated by ','
     warehouses = p_warehouse.split(',') if (',' in p_warehouse) else [p_warehouse]
-    last_wh_idx = 0
+    warehouses_spread = warehouses * (DAG_MATRIX_SHAPE[0] * DAG_MATRIX_SHAPE[1])
+    wh_idx = 1
 
     # We now iterate through the dag matrix and define the tasks
     task_matrix_dag_asarray = task_matrix_dag.flatten()
@@ -194,9 +195,8 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
         range_from = task_name.split('_')[l-2]
 
         #determine the warehouse to use from the list of warehouses
-        wh_idx = last_wh_idx + 1 if last_wh_idx + 1 < len(warehouses) else 0
-        last_wh_idx = wh_idx
-        l_warehouse = warehouses[wh_idx]
+        l_warehouse = warehouses_spread[wh_idx]
+        wh_idx += 1
 
         sql_stmts = [
             f'''
