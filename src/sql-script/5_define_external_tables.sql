@@ -32,7 +32,9 @@ select
     ,p_billing_code_type_version as billing_code_type_version 
     ,value:name::varchar as name
     ,value:description::varchar as description
-    ,value as negotiated_rates_segment_chunks
+    ,value:CHUNK_NO::int as chunk_no
+    ,array_size(value:NEGOTIATED_RATES) as chunk_size
+    ,value:NEGOTIATED_RATES as negotiated_rates
 from ext_negotiated_arrangments_staged as l
     join in_network_rates_file_header as r
         on l.p_data_fl = r.data_file_basename
@@ -51,7 +53,7 @@ select
     ,billing_code 
     ,billing_code_type_version 
     ,name
-    ,sum(ARRAY_SIZE(negotiated_rates_segment_chunks:NEGOTIATED_RATES)) as segement_record_count
+    ,sum(chunk_size) as segment_record_count
 from negotiated_rates_segments_v
 group by 
     data_file
@@ -68,9 +70,26 @@ create or replace view negotiated_rates_segment_info_v
 comment = 'a flattened view of various negotiated rates segment in a file and thier sub-ordinate record count'
 as
 select 
-    t.* exclude(negotiated_rates_segment_chunks)
+    t.* exclude(negotiated_rates)
+    ,nr.index as negotiated_rates_record_index
     ,nr.value:negotiated_prices as negotiated_prices
     ,nr.value:provider_groups as provider_groups
 from negotiated_rates_segments_v as t
-    , lateral flatten (input => t.negotiated_rates_segment_chunks:NEGOTIATED_RATES) as nr
+    , lateral flatten (input => t.negotiated_rates) as nr
+;
+
+
+create or replace view negotiated_prices_v
+comment = 'a flattened view of negotiated prices'
+as
+select 
+    b.* exclude(negotiated_prices)
+    ,p.index as negotiated_prices_record_index
+    ,p.value:billing_class::varchar as billing_class
+    ,p.value:expiration_date::date as expiration_date
+    ,p.value:negotiated_rate::double as negotiated_rate
+    ,p.value:negotiated_type::varchar as negotiated_type
+    ,p.value:service_code as service_code
+from negotiated_rates_segment_info_v as b
+    ,lateral flatten(input => b.negotiated_prices) as p
 ;

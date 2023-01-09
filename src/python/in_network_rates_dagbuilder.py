@@ -182,6 +182,10 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
     #  - For each of the DAG row, we find out the last elements of the row also
     line_end_tasks = task_matrix[:,-1]
 
+    #warehouse can be one or multiple seperated by ','
+    warehouses = p_warehouse.split(',') if (',' in p_warehouse) else [p_warehouse]
+    last_wh_idx = -1
+
     # We now iterate through the dag matrix and define the tasks
     task_matrix_dag_asarray = task_matrix_dag.flatten()
     for task_name ,preceding_task in task_matrix_dag_asarray:
@@ -189,10 +193,15 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
         range_to = task_name.split('_')[l-1]
         range_from = task_name.split('_')[l-2]
 
+        #determine the warehouse to use from the list of warehouses
+        wh_idx = last_wh_idx + 1 if last_wh_idx + 1 < len(warehouses) else 0
+        last_wh_idx = wh_idx
+        l_warehouse = warehouses[wh_idx]
+
         sql_stmts = [
             f'''
                 create or replace task {task_name}
-                warehouse = {p_warehouse}
+                warehouse = {l_warehouse}
                 user_task_timeout_ms = {USER_TASK_TIMEOUT}
                 comment = 'negotiated_arrangements segment range [{range_from} - {range_to}] data ingestor '
                 after {preceding_task}
