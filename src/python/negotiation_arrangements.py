@@ -309,9 +309,12 @@ def should_proceed_with_parsing(p_session: Session ,p_datafile: str ,p_from_seg:
     return (total_no_of_segments ,should_proceed_processing)
     
 def refresh_stages_and_tables(p_session ,p_target_stage):
+
+    target_stg = p_target_stage.replace('@','').split('/')[0]
+
     # yes this sometimes takes away some cycles. but needed in larger segment/task
     # instances like when parsing CIGNA data files of 1TB
-    p_session.sql(f'alter stage {p_target_stage} refresh; ').collect()
+    p_session.sql(f'alter stage {target_stg} refresh; ').collect()
 
     p_session.sql(f'alter external table ext_negotiated_arrangments_staged refresh; ').collect()
     return 
@@ -359,7 +362,7 @@ def main(p_session: Session
         ret['task_ignored_parsing'] = True
         ret['task_parsing_ignore_message'] = f'The segment range is greater than the total segments {total_no_of_segments} in the file, hence ignore further parsing'
     
-    refresh_stages_and_tables(p_session ,p_target_stage)
+    # refresh_stages_and_tables(p_session ,p_target_stage)
 
     end = datetime.datetime.now()
     elapsed = (end - start)
