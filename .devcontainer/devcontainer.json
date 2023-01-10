@@ -1,0 +1,93 @@
+{
+    //Documentation: https://containers.dev/implementors/spec/
+    "name": "Snowflake-Codespaces",
+    "build": {
+        "dockerfile": "./Dockerfile",
+        "context": "."
+    },
+    "features": {
+        //For a list of features: https://github.com/devcontainers/features/tree/main/src
+        // "ghcr.io/devcontainers/features/git:1": {
+        //     "version": "latest",
+        //     "ppa": "false"
+        // }
+        // Interesting optional features
+        // "ghcr.io/devcontainers/features/git-lfs:1": {},
+        // "ghcr.io/devcontainers/features/aws-cli:1": {},
+        // "ghcr.io/devcontainers/features/azure-cli:1": {}
+    },
+    "hostRequirements": {
+        "cpus": 8,
+        "memory": "16gb",
+        "storage": "64gb" 
+    },
+
+    "portsAttributes": {
+        "9001": {
+            "label": "Streamlit Application port"
+            ,"protocol" : "https"
+        },
+        "8888": {
+            "label": "Jupyter notebook port"
+        }
+    },
+
+    // Use 'forwardPorts' to make a list of ports inside the container available locally.
+   "forwardPorts": [
+        9001
+        ,8888
+    ],
+    "waitFor": "onCreateCommand",
+    // Use 'postCreateCommand' to run commands after the container is created.
+    "postCreateCommand": "chmod +x ./bin/post_create_setup.sh && ./bin/post_create_setup.sh",
+    "customizations": {
+        // "codespaces": {
+        //     "openFiles": []
+        // },
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/opt/conda/bin/python",
+                "python.linting.enabled": true,
+                "python.linting.pylintEnabled": true,
+                "python.formatting.autopep8Path": "/opt/conda/bin/autopep8",
+                "python.formatting.yapfPath": "/opt/conda/bin/yapf",
+                "python.linting.flake8Path": "/opt/conda/bin/flake8",
+                "python.linting.pycodestylePath": "/opt/conda/bin/pycodestyle",
+                "python.linting.pydocstylePath": "/opt/conda/bin/pydocstyle",
+                "python.linting.pylintPath": "/opt/conda/bin/pylint",
+                "workbench.colorTheme": "Solarized Dark",
+                "workbench.iconTheme": "vscode-icons",
+                "terminal.integrated.profiles.linux": {
+                    "bash": {
+                        "path": "/bin/bash"
+                    }
+                }
+            },
+            "extensions": [
+                "coenraads.bracket-pair-colorizer-2",
+                "cschleiden.vscode-github-actions",
+                "eamodio.gitlens",
+                "github.vscode-pull-request-github",
+                "ms-vsliveshare.vsliveshare",
+                "vscode-icons-team.vscode-icons",
+                "visualstudioexptteam.vscodeintellicode",
+                "ms-toolsai.jupyter",
+                "ms-python.python",
+
+                //Snowflake vs code extension
+                "snowflake.snowflake-vsc",
+
+                //Snowflake Syntax Highlight
+                "houssemslimani.snowflake-syntax-highlight",
+                //Prettier - Code formatter
+                "esbenp.prettier-vscode",
+                //Prettier SQL VSCode
+                "inferrinizzard.prettier-sql-vscode",
+                //Snowflake Theme
+                "breberaf.snowflake"
+            ]
+        }
+    },
+    // Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+    "remoteUser": "root"
+}

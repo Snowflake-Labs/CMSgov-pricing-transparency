@@ -26,6 +26,7 @@ Some key points to note, when it comes to providing this file are:
 Here are some examples of files, from providers:
   - [Priority Health](https://www.priorityhealth.com/landing/transparency)
   - [Cigna](https://www.cigna.com/legal/compliance/machine-readable-files)
+  - [United](https://transparency-in-coverage.uhc.com/)
   - *TO ADD MORE WEBSITES *
 
 These files (ex: https://priorityhealthtransparencymrfs.s3.amazonaws.com/HMO.html) are large (multi GB). They are also distributed as compressed json files. In our example a <span style="color:blue">450MB</span> compressed ZIP file, turned out to be <span style="color:blue">13.5GB</span> uncompressed.
@@ -35,7 +36,7 @@ To load these large files; we typically follow the steps:
  2. Break the file into individual/smaller components
  3. Ingest each of the components, individually in sequence or parallel
 
-Typically, client use external tools (ex: informatica/spark) to perform the above process. With the new "Dynamic file access" feature (currently in PrPr), we could parse these large files natively in Snowflake using Snowpark Python stored procedures.
+Typically, client use external tools (ex: datastage/informatica/spark) to perform the above process. With the new "Dynamic file access" feature (currently in PrPr), we could parse these large files natively in Snowflake using Snowpark Python stored procedures.
 
 Hence, this repo is a demonstration of how to ingest large files (json) using Snowflake. 
 
