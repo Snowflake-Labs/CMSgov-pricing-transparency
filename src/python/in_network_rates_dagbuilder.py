@@ -127,6 +127,7 @@ def create_root_task_and_fh_loader(p_session: Session
     fl_basename = get_cleansed_file_basename(p_datafile)
     root_task_name = f'''DAG_ROOT_{fl_basename}'''
     fh_task_name = f't_fh_{fl_basename}'
+    segment_header_task_name = f't_segh_{fl_basename}'
 
     sql_stmts = [
         f'alter task if exists {root_task_name} suspend;' 
@@ -150,12 +151,24 @@ def create_root_task_and_fh_loader(p_session: Session
             call parse_file_header('{p_stage_path}','{p_datafile}');
         '''
         ,f'alter task if exists {fh_task_name} resume;'
+
+        ,f'''
+        create or replace task {segment_header_task_name}
+            warehouse = {p_warehouse}
+            comment = 'segment header data ingestor for file: {p_datafile}'
+            after {fh_task_name} 
+            as 
+            call negotiation_arrangements_header('{p_stage_path}','{p_datafile}');
+        '''
+        ,f'alter task if exists {segment_header_task_name} resume;'
+
+
     ]
     for stmt in sql_stmts:
         p_session.sql(stmt).collect()
         
 
-    return root_task_name ,fh_task_name
+    return root_task_name ,fh_task_name ,segment_header_task_name
 
 def reshape_tasks_to_matrix(p_task_list):
     arr = np.asarray(p_task_list ,dtype=object)
@@ -267,9 +280,10 @@ def create_term_tasks(p_session: Session ,p_datafile: str
 
     return term_task_name
 
-def main(p_session: Session
+def main_matrix(p_session: Session
     ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
-    ,p_segments_per_task: int ,p_warehouse: str ):
+    ,p_segments_per_task: int ,p_warehouse: str 
+    ,p_dag_rows: int ,p_dag_cols: int):
     ret = {}
     ret['data_file'] = p_datafile
 
@@ -278,6 +292,8 @@ def main(p_session: Session
 
     delete_taskdefinitions_for_datafile(p_session ,p_datafile)
 
+    DAG_MATRIX_SHAPE = (p_dag_rows,p_dag_cols)
+
     # map segments to tasks. the task will parse and ingest the specified segments
     task_to_segments_df = save_tasks_to_segments(p_datafile ,p_segments_per_task)
     append_to_table(p_session ,task_to_segments_df)
@@ -285,7 +301,7 @@ def main(p_session: Session
     l_warehouses = p_warehouse.split(',') if (',' in p_warehouse) else [p_warehouse]
 
     # create root task
-    root_task_name, fh_task_name = create_root_task_and_fh_loader(p_session  
+    root_task_name, fh_task_name ,segment_header_task_name = create_root_task_and_fh_loader(p_session  
         ,p_stage_path ,p_datafile ,l_warehouses[0])
     ret['root_task'] = root_task_name
 
@@ -300,12 +316,26 @@ def main(p_session: Session
     line_end_tasks = create_subtasks(p_session ,root_task_name 
         ,p_stage_path ,p_datafile ,p_target_stage
         ,p_warehouse ,task_list)
-    line_end_tasks = np.append(line_end_tasks ,[fh_task_name])
+    
+    line_end_tasks = np.append(line_end_tasks ,[segment_header_task_name])
     line_end_tasks = line_end_tasks.tolist()
+
+    task_list.append(fh_task_name)
     
     # create term task
     term_task_name = create_term_tasks(p_session ,p_datafile ,l_warehouses[0] ,root_task_name ,line_end_tasks ,task_list)
     ret['term_task'] = term_task_name
 
     ret['status'] = True
+    return ret
+
+def main(p_session: Session
+    ,p_stage_path: str ,p_datafile: str ,p_target_stage: str
+    ,p_segments_per_task: int ,p_warehouse: str ):
+
+    ret = main_matrix(p_session
+    ,p_stage_path ,p_datafile ,p_target_stage
+    ,p_segments_per_task ,p_warehouse
+    ,5 ,15)
+
     return ret

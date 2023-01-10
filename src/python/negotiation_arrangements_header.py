@@ -16,50 +16,13 @@ import datetime
 from sp_commons import *
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logger = logging.getLogger("negotiation_arrangements_header")
+logger = logging.getLogger("in_network_rates_segment_header")
 
 # List of childrens that form a repeatable section
 REPEATABLE_CHILDREN_SECTIONS = ['negotiated_rates' ,'bundled_codes' ,'covered_services']
 
-def save_header(p_session: Session ,p_innetwork_hdr ,p_rec):
-    '''
-     For each segment, this stores the header elements and stats information.
-    '''
-    negotiated_rates_count = len(p_rec['negotiated_rates']) if 'negotiated_rates' in p_rec else -1
-    bundled_codes_count = len(p_rec['bundled_codes']) if 'bundled_codes' in p_rec else -1
-    covered_services_count = len(p_rec['covered_services_count']) if 'covered_services_count' in p_rec else -1
-    # negotiated_rates_info = str(p_innetwork_hdr)
-    negotiated_rates_info = p_innetwork_hdr
-
-    #TODO there should be a better way to perform this one record merge operations,
-    #current steps is too much
-    # sql_stmt = f'''
-    #     merge into in_network_rates_segment_header as tgt 
-    #         using in_network_rates_segment_header as src
-    #             on src.data_file = tgt.data_file
-    #                 and src.segment_id = tgt.segment_id
-            
-    #         when not matched then 
-    #             insert (seq_no, segment_id ,data_file 
-    #                 ,negotiated_rates_count ,bundled_codes_count ,covered_services_count
-    #                 ,negotiated_rates_info) 
-    #             values (
-    #                 {p_innetwork_hdr['SEQ_NO']} ,'{p_innetwork_hdr['SEGMENT_ID']}' ,'{p_innetwork_hdr['DATA_FILE']}'
-    #                 ,{negotiated_rates_count} ,{bundled_codes_count} ,{covered_services_count}
-    #                 ,'{negotiated_rates_info}'
-    #             );
-    # '''
-    # p_session.sql(sql_stmt).collect()
-    
-    curr_rec = p_innetwork_hdr.copy()
-    curr_rec['NEGOTIATED_RATES_INFO'] = negotiated_rates_info
-    curr_rec['NEGOTIATED_RATES_COUNT'] = negotiated_rates_count
-    curr_rec['BUNDLED_CODES_COUNT'] = bundled_codes_count
-    curr_rec['COVERED_SERVICES_COUNT'] = covered_services_count
-
-    batch_records = []
-    batch_records.append(curr_rec)
-    df = pd.DataFrame(batch_records)
+def save_header(p_session: Session ,p_segment_headers):
+    df = pd.DataFrame(p_segment_headers)
     sp_df = get_snowpark_dataframe(p_session ,df)
     
     target_table = p_session.table('in_network_rates_segment_header')
@@ -79,14 +42,48 @@ def save_header(p_session: Session ,p_innetwork_hdr ,p_rec):
 
     return merged_df
 
+def build_segment_header_info(p_innetwork_hdr ,p_rec):
+    '''
+     For each segment, this stores the header elements and stats information.
+    '''
+    negotiated_rates_count = len(p_rec['negotiated_rates']) if 'negotiated_rates' in p_rec else -1
+    bundled_codes_count = len(p_rec['bundled_codes']) if 'bundled_codes' in p_rec else -1
+    covered_services_count = len(p_rec['covered_services_count']) if 'covered_services_count' in p_rec else -1
+    # negotiated_rates_info = str(p_innetwork_hdr)
+    negotiated_rates_info = p_innetwork_hdr
+
+    curr_rec = p_innetwork_hdr.copy()
+    curr_rec['NEGOTIATED_RATES_INFO'] = negotiated_rates_info
+    curr_rec['NEGOTIATED_RATES_COUNT'] = negotiated_rates_count
+    curr_rec['BUNDLED_CODES_COUNT'] = bundled_codes_count
+    curr_rec['COVERED_SERVICES_COUNT'] = covered_services_count
+
+    return curr_rec
+
+def get_segment_id(p_rec ,p_segment_idx):
+    negotiation_arrangement = str(p_rec['negotiation_arrangement'])
+    billing_code = str(p_rec.get('billing_code' ,'-'))
+    billing_code_type = str(p_rec.get('billing_code_type' ,'-'))
+    billing_code_type_version = str(p_rec.get('billing_code_type_version' ,'-'))
+
+    # providers can all also add customer fields into the header section to make it unique.
+    # ex CIGNA adds derv_tin & type informations
+    keys_to_ignore = REPEATABLE_CHILDREN_SECTIONS + ['name','description','billing_code','billing_code_type','billing_code_type_version','negotiation_arrangement']
+    values_concatted = [ f'{k}={p_rec[k]}' for k in p_rec.keys() if k not in keys_to_ignore]
+    values_concatted = '^'.join(values_concatted)
+
+    segment_id = f'''{negotiation_arrangement}::{billing_code_type}::{billing_code}::{billing_code_type_version}::{p_segment_idx}::{values_concatted}'''
+    segment_id = re.sub('[^0-9a-zA-Z:=]+', '_', segment_id).lower()
+    return segment_id
+
 def parse_breakdown_save(p_session: Session  
         ,p_stage_path: str ,p_datafile: str ,f):
     logger.info('Parsing and breaking down in_network ...')
     
-    datafl_basename = get_basename_of_datafile(p_datafile)
-    out_folder = os.path.join('/tmp', datafl_basename)
-   
-    eof_reached = True
+    # datafl_basename = get_basename_of_datafile(p_datafile)
+    # out_folder = os.path.join('/tmp', datafl_basename)
+    
+    segment_headers = []
     segment_idx = 0
     stored_segment_idx = 0
     for rec in ijson.items(f, 'in_network.item' ,use_float=True):
@@ -101,17 +98,18 @@ def parse_breakdown_save(p_session: Session
             innetwork_hdr.pop(k, None)
 
         # get a unique identifier that will form as the segment identifier
-        l_segment_id = get_segment_id(rec)
+        l_segment_id = get_segment_id(rec ,segment_idx)
         
         innetwork_hdr['SEQ_NO'] = segment_idx
         innetwork_hdr['DATA_FILE'] = p_datafile
         innetwork_hdr['SEGMENT_ID'] = l_segment_id
 
-        #TODO investigate a better way to save the header info. May be a seperate task on its own 
-        save_header(p_session ,innetwork_hdr ,rec)
+        seg_hdr = build_segment_header_info(innetwork_hdr ,rec)
+        segment_headers.append(seg_hdr)
+        
         stored_segment_idx += 1
 
-    # p_session.sql(f'alter stage {p_target_stage} refresh; ').collect()
+    save_header(p_session ,seg_hdr)
     return stored_segment_idx
 
 def parse_breakdown_save_wrapper(p_session: Session 
@@ -172,9 +170,9 @@ def main(p_session: Session
     report_execution_status(p_session ,p_datafile ,ret)
     start = datetime.datetime.now()
     
-    stored_segment_count ,parsing_error = parse_breakdown_save_wrapper(p_session 
+    segments_count ,parsing_error = parse_breakdown_save_wrapper(p_session 
         ,p_stage_path ,p_datafile)
-    # ret['stored_segment_count'] = stored_segment_count
+    ret['segments_count'] = segments_count
 
     end = datetime.datetime.now()
     elapsed = (end - start)
