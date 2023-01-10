@@ -31,6 +31,10 @@ MAX_RECORDS_PER_SEGMENT_CHUNK = 5000
 # List of childrens that form a repeatable section
 REPEATABLE_CHILDREN_SECTIONS = ['negotiated_rates' ,'bundled_codes' ,'covered_services']
 
+# The number of files to upload to stage must be this or greater.
+MIN_FILEZ_COUNT_TO_UPLOAD=10
+
+
 def save_header(p_session: Session ,p_innetwork_hdr ,p_rec):
     '''
      For each segment, this stores the header elements and stats information.
@@ -89,8 +93,17 @@ def save_header(p_session: Session ,p_innetwork_hdr ,p_rec):
 
     return merged_df
 
-def upload_segments_file_to_stage(p_session: Session ,p_local_dir: str ,p_target_stage: str ,p_stage_dir: str):
+def upload_segments_file_to_stage(p_session: Session ,p_local_dir: str ,p_target_stage: str ,p_stage_dir: str ,p_force: bool):
     logger.info(f" Uploading data to stage: {p_target_stage}/{p_stage_dir} ... ")
+
+    if (p_force == False):
+        files_count = 0
+        for path, subdirs, files in os.walk(p_local_dir):
+            fl_names = [ name for name in files if '.parquet.gz' in name ]
+            files_count += len(fl_names)
+            
+        if (files_count <= MIN_FILEZ_COUNT_TO_UPLOAD):
+            return False
 
     # get the list of folders where parquet files are present
     data_dirs = { path for path, subdirs, files in os.walk(p_local_dir) for name in files if '.parquet.gz' in name }
@@ -106,7 +119,7 @@ def upload_segments_file_to_stage(p_session: Session ,p_local_dir: str ,p_target
             ,stage_location = f'{p_target_stage}/{stage_dir}/'
             ,auto_compress=False ,overwrite=True ,parallel=20 )
         
-    return
+    return True
 
 def divide_list_to_chunks(p_list, p_chunk_size):
     #Ref: https://www.geeksforgeeks.org/break-list-chunks-size-n-python/
@@ -218,15 +231,17 @@ def parse_breakdown_save(p_session: Session
             parse_save_segment_children(segment_idx ,l_segment_id ,out_folder 
                 ,children_type ,innetwork_hdr ,rec)
 
-        upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename)
-        shutil.rmtree(out_folder)
+        uploaded = upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename ,False)
+
+        if uploaded == True:
+            shutil.rmtree(out_folder)
 
         #TODO investigate a better way to save the header info. May be a seperate task on its own 
         # save_header(p_session ,innetwork_hdr ,rec)
         stored_segment_idx += 1
         
     #upload any residual
-    upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename)
+    upload_segments_file_to_stage(p_session ,out_folder ,p_target_stage ,datafl_basename ,True)
     # if Path(out_folder).exists() and Path(out_folder).is_dir():
     shutil.rmtree(out_folder, ignore_errors=True)
 
