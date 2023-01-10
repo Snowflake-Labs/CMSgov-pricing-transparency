@@ -80,9 +80,6 @@ def parse_breakdown_save(p_session: Session
         ,p_stage_path: str ,p_datafile: str ,f):
     logger.info('Parsing and breaking down in_network ...')
     
-    # datafl_basename = get_basename_of_datafile(p_datafile)
-    # out_folder = os.path.join('/tmp', datafl_basename)
-    
     segment_headers = []
     segment_idx = 0
     stored_segment_idx = 0
@@ -109,7 +106,7 @@ def parse_breakdown_save(p_session: Session
         
         stored_segment_idx += 1
 
-    save_header(p_session ,seg_hdr)
+    save_header(p_session ,segment_headers)
     return stored_segment_idx
 
 def parse_breakdown_save_wrapper(p_session: Session 

@@ -241,10 +241,11 @@ def create_subtasks(p_session: Session ,p_root_task_name: str
     
     return line_end_tasks
 
-def create_term_tasks(p_session: Session ,p_datafile: str
+def create_term_tasks(p_session: Session ,p_datafile: str ,p_target_stage: str
     ,p_warehouse: str ,p_root_task_name: str ,p_line_end_task_lists:List[str] ,p_task_lists:List[str]):
     logger.info(f'Creating the task ddl ...')
 
+    target_stg_base = p_target_stage.replace('@','').split('/')[0]
     fl_basename = get_cleansed_file_basename(p_datafile)
     term_task_name = f'TERM_tsk_{fl_basename}'
     
@@ -255,7 +256,7 @@ def create_term_tasks(p_session: Session ,p_datafile: str
     tasks_to_terminate = list(set(p_task_lists) | set(p_line_end_task_lists)) 
     for task_name in tasks_to_terminate:
         task_stmts.append(f''' alter task if exists  {task_name} suspend; ''')
-        task_stmts.append(f''' drop task if exists  {task_name}; ''')
+        # task_stmts.append(f''' drop task if exists  {task_name}; ''')
     
     task_stmts_str = '\n'.join(task_stmts)
     sql_stmts = [
@@ -267,6 +268,11 @@ def create_term_tasks(p_session: Session ,p_datafile: str
                     begin
                         {task_stmts_str}
 
+                        -- refresh the external stage and table, this could take sometime
+                        -- based on the no of files staged
+                        alter stage {target_stg_base} refresh;
+                        alter external table ext_negotiated_arrangments_staged refresh;
+                        
                         -- drop task if exists {p_root_task_name};
 
                         insert into segment_task_execution_status( data_file  ,task_name) 
@@ -305,9 +311,6 @@ def main_matrix(p_session: Session
         ,p_stage_path ,p_datafile ,l_warehouses[0])
     ret['root_task'] = root_task_name
 
-    #TODO add negotiatio header parser
-
-
     # # create sub tasks and add to root task
     task_to_segments_df.sort_values(by=['BUCKET'], inplace=True)
     task_list = list(task_to_segments_df.ASSIGNED_TASK_NAME.values)
@@ -323,7 +326,7 @@ def main_matrix(p_session: Session
     task_list.append(fh_task_name)
     
     # create term task
-    term_task_name = create_term_tasks(p_session ,p_datafile ,l_warehouses[0] ,root_task_name ,line_end_tasks ,task_list)
+    term_task_name = create_term_tasks(p_session ,p_datafile ,p_target_stage ,l_warehouses[0] ,root_task_name ,line_end_tasks ,task_list)
     ret['term_task'] = term_task_name
 
     ret['status'] = True

@@ -36,7 +36,8 @@ def save_header(p_session: Session ,p_data_file ,p_fl_header):
             ,'HEADER': p_fl_header
             })
          ,F.when_matched().update({
-            'HEADER': p_fl_header
+            'DATA_FILE': sp_df['DATA_FILE']
+            ,'HEADER': p_fl_header
             }), 
         ])
 
@@ -111,9 +112,10 @@ def main(p_session: Session
     
     # save the header before processing, to indicate this is currently under process. 
     #without this, it will take a long time to see if FH has loaded
-    l_fl_header['DATA_FILE'] = p_datafile
-    l_fl_header['status'] = 'processing'
-    save_header(p_session ,p_datafile ,l_fl_header)
+    l_t_fl_header = {}
+    l_t_fl_header['DATA_FILE'] = p_datafile
+    l_t_fl_header['status'] = 'processing'
+    save_header(p_session ,p_datafile ,l_t_fl_header)
 
     l_fl_header = parse_breakdown_save_wrapper(p_session 
         ,p_stage_path ,p_datafile)
