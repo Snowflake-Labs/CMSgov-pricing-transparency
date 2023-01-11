@@ -127,6 +127,9 @@ def invoke_dag():
     for stmt in sql_stmts:
         sp_session.sql(stmt).collect()
 
+    st.write('Wait for about 10 min for the DAG to finish')
+    time.sleep(10*60)
+
     end_time = time.time()
     st.write(f'Ended at: {datetime.now().strftime("%H:%M:%S")}')
 
@@ -134,6 +137,10 @@ def invoke_dag():
     elapsed = str(timedelta(seconds=elapsed_time))
     st.write(f'Elapsed: {elapsed}')
 
+def refresh_tables_stages():
+    sp_session.sql(f''' alter stage {config['APP_DB']['ext_stage']} refresh; ''').collect()
+    sp_session.sql(f''' alter table ext_negotiated_arrangments_staged refresh; ''').collect()
+    
 
 def build_ui():
 
@@ -168,13 +175,11 @@ def build_ui():
             ,on_click=invoke_dag
         )
 
-        st.write('Wait for about 10 min for the DAG to finish')
-        time.sleep(10*60)
+    with st.expander("Step 4- Refresh stages & tables"):
+        st.button('Refresh'
+            ,on_click=refresh_tables_stages
+        )
         
-    #TODO sleep for about 10 mins
-    #display the segment_task_execution_status table for this data file (refer monitor_dag_status notebook)
-    # build out all the other views from notebook monitor_dag_status
-    
 # ----------------------------
 if __name__ == "__main__":
     build_ui()
