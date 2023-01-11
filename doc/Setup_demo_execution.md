@@ -77,12 +77,13 @@ In order to setup and execute in your Snowflake, the following are the pre-requs
     
  ![](./soln_images/setup_page.png)
 
- - Process sample data (use notebook: load_using_dag)
-   - Wait for about 10-15 min
-   - Refresh the external stage and the external table:
-     - `alter stage ext_data_stg refresh;`
-     - `alter table ext_negotiated_arrangments_staged refresh;`
-
-  ![](./soln_images/load_sample_data_page.png)
+ - Go to ingest sample data (or use notebook: load_using_dag)
+   - step thru the various sections to ingest the reduced sample 
   
+  ![](./soln_images/load_sample_data_page.png)
+
+ - Inspect the file audits views:
+  ![](./soln_images/file_report_audit_view.png)
+
  - Inspect the various tables & views 
+  ![](./soln_images/full_data_view.png)

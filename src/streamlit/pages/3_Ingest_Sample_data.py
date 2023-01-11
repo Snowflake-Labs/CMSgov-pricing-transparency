@@ -139,7 +139,7 @@ def invoke_dag():
 
 def refresh_tables_stages():
     sp_session.sql(f''' alter stage {config['APP_DB']['ext_stage']} refresh; ''').collect()
-    sp_session.sql(f''' alter table ext_negotiated_arrangments_staged refresh; ''').collect()
+    # sp_session.sql(f''' alter table ext_negotiated_arrangments_staged refresh; ''').collect()
     
 
 def build_ui():
@@ -179,6 +179,8 @@ def build_ui():
         st.button('Refresh'
             ,on_click=refresh_tables_stages
         )
+
+        U.load_sample_and_display_table(sp_session ,'ext_negotiated_arrangments_staged' ,5)
         
 # ----------------------------
 if __name__ == "__main__":
