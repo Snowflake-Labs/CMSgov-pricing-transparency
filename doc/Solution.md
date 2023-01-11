@@ -11,6 +11,8 @@ Further processing of the data is left to user of data.
 
 ### Solution Walthru
 
+![](./soln_images/solution.png)
+
 #### Factors for spliting the files
 
 
@@ -36,7 +38,7 @@ Further processing of the data is left to user of data.
 
 the data from the stage and ingest the same into Snowflake. We depend on Python Dynamic file access feature.
 
-![](./soln_images/solution.png)
+
 
 The Snowpark stored procedure, will not be performing a copy of the file into local sandbox environment, as
 sometimes even the compresssed ones can be larger in size, greater than 500 MB. The dynamic file access feature

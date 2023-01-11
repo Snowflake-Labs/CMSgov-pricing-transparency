@@ -17,7 +17,7 @@ create or replace external table ext_negotiated_arrangments_staged(
     ,p_segment_type varchar as ( split_part(metadata$filename, '/', 4) )
 )
 partition by (p_data_fl ,p_segment_id ,p_negotiation_arrangement ,p_billing_code_type ,p_billing_code ,p_billing_code_type_version ,p_segment_type)
-location = @ext_data_stg/raw_parsed/
+location = @&APP_DB_ext_stage/&APP_DB_folder_parsed/ 
 file_format = ( type = parquet )
 ;
 

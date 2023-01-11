@@ -82,4 +82,7 @@ In order to setup and execute in your Snowflake, the following are the pre-requs
    - Refresh the external stage and the external table:
      - `alter stage ext_data_stg refresh;`
      - `alter table ext_negotiated_arrangments_staged refresh;`
+
+  ![](./soln_images/load_sample_data_page.png)
+  
  - Inspect the various tables & views 
