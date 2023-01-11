@@ -9,8 +9,26 @@
 
 Further processing of the data is left to user of data.
 
+### Solution Walthru
+
+#### Factors for spliting the files
 
 
+#### How to parse the files
+
+  - ijson
+  - stored procedures
+  - staging of parquet files
+  - partitioning
+  - storing the sections as json
+
+#### Tasks & DAGS
+
+
+#### Views, further processings
+
+
+### Limitations & Next steps
 
 
 
