@@ -42,28 +42,16 @@ Hence, this repo is a demonstration of how to ingest large files (json) using Sn
 
 NOTE: downloading of files to a stage, is still out of scope. As this is not possible in Snowflake.
 
-## Setup and Demo execution
-- [Doc: SQL-worksheet-walkthru](./doc/SQL-worksheet-walkthru.md)
-
-Ingested sample of in_network_rates:negotiated_rates 
-
-![](doc/images/in_network_rates.png)
-
-### Post ingestion sqls
-Here are some queries that can be issued against the data.
-
-- [Doc: Sample-post-ingestion-queries](doc/Sample-post-ingestion-queries.md)
-
----
-
-## Solution
+## Links
+- [Doc: Ingestion process flow](./doc/Ingestion_process_flow.md)
 - [Doc: Solution walk thru](./doc/Solution.md)
+- [Doc: Setup and demo execution](./doc/Setup_demo_execution.md)
 
 ## Concerns and Limitations
    
-  - The current implementation has been tested only with 13GB; Further tests need to be conducxted on larger file sizes
+  - The current implementation has been tested only with some samples from CIGNA & Priority Health; Further tests need to be conducxted on larger file sizes
   - All code is shared as-is, It is upto the consumer to productionalize the work and update the code/functionality based on thier situation. We will not be supporting or liable. Effort will be taken to help the consumer to answer any queries related to the functionality  
 
 ### Snowflake Features
 
-  - *Python Dynamic file access:* is currently in PrPr.
+  - *Python Dynamic file access:*
