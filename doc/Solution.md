@@ -13,8 +13,6 @@ Further processing of the data is left to user of data.
 
 ![](./soln_images/solution.png)
 
-
-
 #### Factors for spliting the files
 
 ##### Can we load the entire file into a single record ?
@@ -70,65 +68,39 @@ Snowpark python stored procedure was the choice for the implementation.
 
 ##### Staging parquet files
 
-  - ijson
-  - stored procedures
-  - staging of parquet files
-  - partitioning
-  - storing the sections as json
+Based on experimentations, I found that when storing a dataframe from stored proc there is inherently a temporary stage creation, uploading of the data into this stage finally performing a copy into operation. While these set of operations are ok for smaller
+data processing, however when we are processing multi GB file sized data it introduced a lot of time. 
+
+Moreover, based on my interaction with some SME's I realized that it is not always of best interest that the user is interested in all the billing code segments. While some use are very focused and others are broader.
+
+Hence the segments once parsed are staged in the external stage as parquet files. An external table 'ext_negotiated_arrangments_staged' can be used to process the records. The files will be stored in a partition manner. The partition would be of:
+```
+ <data file>/<billing code>/<billing code type & version>/<negotiation arrangement>/<segment type>/(parquet data file)
+```
+![](./soln_images/datafile_folders_and_partitions.png)
 
 #### Tasks & DAGS
 
+When it comes to parsing and processing data file, doing in a single instance of Stored procedure results in a long duration. Parallelizing the processing can help in speed of ingestion. In order to achieve this, we define tasks based of a stored procedure [negotiation_arrangements.py](../src/python/negotiation_arrangements.py) which is parameterized to parse only certain portions / segments of the file and ignore any other sections. We could interconnect and arrange these tasks into a DAG and thus achieve parallel processing. Once ingestion is completed, these tasks will be suspended. Finally the entire DAG can be deleted also. These tasks will be specific to a data file that is getting processed.
+
+![](./soln_images/dag_layout.png)
+
+The above is a layout of such a DAG, with different tasks. The tasks are arranged in a way such that consequtive segments are processed in parallels. Also the tasks can optionally run in different warehouse thus achieving parallel execution.
+
+Lastly one cool thing I did is that; this DAG is completely defined dynamic. With just a call to stored procedure [in_network_rates_dagbuilder.py](./src/python/in_network_rates_dagbuilder.py), this DAG gets created in Snowflake. And just by invoking the root task the entire set of tasks starts processing. 
+
+All the status of the executions will be stored in the table: SEGMENT_TASK_EXECUTION_STATUS
+![](./soln_images/segment_task_execution_status.png)
 
 #### Views, further processings
 
+As mentioned earlier, the data can be queried via the external table 'ext_negotiated_arrangments_staged'. When storing the various segments we stored the child elements in JSON/variant columns. The users can now build different types of views as they see fit. I have created the following views as part of this demo:
+
+![](./soln_images/external_data_views.png)
 
 ### Limitations & Next steps
 
-
-
-
-
-the data from the stage and ingest the same into Snowflake. We depend on Python Dynamic file access feature.
-
-
-
-The Snowpark stored procedure, will not be performing a copy of the file into local sandbox environment, as
-sometimes even the compresssed ones can be larger in size, greater than 500 MB. The dynamic file access feature
-allow us to read the file directly from the stage.
-
-
-
-
-
-### Ingestion / Processing time
-
-#### Single stored proc
-We initially started of with an implementation, [innetwork_rates_ingestor_sp](../src/python/innetwork_rates_ingestor_sp.py), which was loading each segments (negotiation_arrangments records) in a sequential manner.
-
-It took us nearly 8+ hours to load the complete file entirely. Though we were good to observe that there was no process breakage for even that long of duration. We were not satisfied on the speed.
-
-#### Split Parallelize Dag
-We realized that there is no need of dependency between each segments (negotiation_arrangments records). Hence we could parallelize this ingestion where 
- - We create bucket/chunks/partitions of segments. For ex 7000 negotiation_arrangments are split and arranged into 50 buckets. 
- - Then a stored procedure was created to process each of these chunks in isolation
- - Using DAG, we could now build a pipeline (dynamically), that would create 50 tasks. These tasks would run in parallel
-
-![](./images/split_parallelize.png)
-
-For this to work,
-  - we set the size of the warehouse to XLARGE
-  - We also set concurrency to 10 max warehouses
-
-Here are some observations
- - 50 Buckets took 2 hours
- - 61 Buckets took 1 hour
- - 90 Buckets took 50 minutes
-
-Task has a limitation of only 100 children/parent; hence we did not want to reach the max levels. 
-
-Also, if the DAG/Scheduling is orchestreted/managed externally, ex: airflow etc, i beleive we could reduce the time even further.
-
-We also create a "suspender" task, at the end of DAG. This essentially runs after all the tasks are executed. Its main purpose is to cleanup the entire dag tree. 
-
-
+- Based on the file size, SLAs will need to vary. For example CIGNA 1TB sized file takes a longer time to ingest vs Priority Health data 10GB sized files takes around 30 min.
+- Based on your needs, further data pipelines would need to be build out and not provided in this demo.
+- Refreshing of external stagest/views will take some time. Hence would be better to ingest these into a native table as post processing pipelines.
 
