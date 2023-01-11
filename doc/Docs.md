@@ -1,8 +1,8 @@
 
 
-## Links
-- [Links](#links)
-  - [Note on production readiness](#note-on-production-readiness)
+## TOC
+- [TOC](#toc)
+  - [ Note on production readiness](#-note-on-production-readiness)
   - [ How to setup and run the demo (Locally)](#-how-to-setup-and-run-the-demo-locally)
     - [Installation tools:](#installation-tools)
     - [Setup project:](#setup-project)
@@ -12,12 +12,12 @@
   - [Ingestion Flows](#ingestion-flows)
 
 
-### Note on production readiness
+### <a name="-note-on-production-readiness"></a> Note on production readiness
 This demo is not meant for production, as there are some steps which needs to hardened for a real-production ready worth. Also every organization have thier own policies of defining real-production ready worth.
 
 Since the main aspect of the solution is how to solve the probelem of parsing a large sized data file. It does not mean that we have followed all the necessary best-practices in the demo w.r.t Custom roles, security, data zones etc.. These will need to be tuned to your environment needs.
 
-### <a name="demo_setup"></a> How to setup and run the demo (Locally)
+### <a name="-how-to-setup-and-run-the-demo-locally"></a> How to setup and run the demo (Locally)
 In case if you do not have access to GitHub codespace environment, follow these steps to run the demo.
 
 **NOTE:** It is assumed that you have following skils:
@@ -72,19 +72,20 @@ In order to setup and execute in your Snowflake, the following are the pre-requs
 ![](./soln_images/home_page.png)
 
  - Go to Setup page and run the various steps in the order. These steps will:
-   - Create a database ,schemas ,stages
+   - Create a database ,schemas ,stages ,tables, views & functions ,procedures and other artifacts
    - Create a custom role with task privileges and grant access to this to the 'public' role.
-   - Load sample datasets
-   - Define tables, views & functions and procedures
+   - Load sample datasets from folder [./data](../data/) into internal stage
+    
  ![](./soln_images/setup_page.png)
- 
- - asd
 
+ - Process sample data (use notebook: load_using_dag)
+   - Wait for about 10-15 min
+   - Refresh the external stage and the external table:
+     - `alter stage ext_data_stg refresh;`
+     - `alter table ext_negotiated_arrangments_staged refresh;`
+ - Inspect the various tables & views 
 
-
-
-
-### <a name="ingestion_flows"></a>Ingestion Flows
+### <a name="ingestion-flows"></a>Ingestion Flows
 
 The current solution has various artifacts which aids in the loading and processing of the files. This sections walks thru these steps:
 
