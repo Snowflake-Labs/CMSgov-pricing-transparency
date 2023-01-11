@@ -13,10 +13,62 @@ Further processing of the data is left to user of data.
 
 ![](./soln_images/solution.png)
 
+
+
 #### Factors for spliting the files
 
+##### Can we load the entire file into a single record ?
 
-#### How to parse the files
+The short answer NO. You also cannot create a generic solution that will ingest the data into a table.
+There are some close relations between various segments.
+
+More over there is a vast multiplicity on segments, makes the process complex. Without understanding these
+and blindly loading the data will result in 16MB constraint of Snowflake.
+
+Hence a good understanding of the data schema is a requirement. 
+  - [doc: in-network-rates](https://github.com/CMSgov/price-transparency-guide/tree/master/schemas/in-network-rates)
+
+For the in-network-rates implementation, we split and store on the following fields
+  - negotiated_rates
+  - bundled_codes
+  - covered_services
+  
+Based on my investigation on the file; I realized that the negotiated rates has multiple records and varies based on various
+billing code. Hence this element in the section would be a good factor to break the structure into multiple records.
+![](./soln_images/in_network_rates_breakdown_1.png)
+
+The negotiated prices child elements are infact smaller and can easily be stored inside the variant column and would not
+break the 16MB barrier. 
+![](./soln_images/negotiated_prices_chunks.png)
+
+This structure can be stored in the original JSON structure format. 
+
+Also based on experimentations I found that if the number of children "negotiated prices" is greater than 5k, then its easy
+to cross the 16MB barrier. In such conditions we can artifically break into chunks and serve it to users.
+
+##### Why Snowpark (python) stored procedure ?
+
+The pricing transperancy files uncompressed can be multi GB order magnitude larger, Parsing these large 
+files using UDTF is not possible as there is a time limit of 30 seconds for the UDTF to finish execution. 
+Otherwise you will get a REQUEST_TIMEOUT exception.
+
+Stored procedures are however not constrained by such low time limits, they can run for multiple hours, ideally
+in a dedicated warehouse.
+
+We did look at adopting Java Stored Procedure, however this is a [limitation](https://docs.snowflake.com/en/sql-reference/stored-procedures-java.html#limitations) around reading and writing of files from stage, currently. Hence using we ruled this out.
+
+![](./doc/images/limitation_java_stored_proc.png)
+
+When using Stored procedure, the sandbox environment is limited to 0.5GB and some more, based on the warehouse type
+being used. In any case, these pricing transperancy files when uncompressed could potentially exceed these space limitations
+hence we need to implement a solution that should be able to process the file as a stream, idealy a compressed file stream.
+
+The [IJSON](https://pypi.org/project/ijson/) library is a widely adopted library in the python space, for processing 
+large json files. This library was default available in the Snowflake Anaconda channel too. The library had the 
+unique functionality to parse the json file, which are streamed and does not require to load the entire file. Thus 
+Snowpark python stored procedure was the choice for the implementation.
+
+##### Staging parquet files
 
   - ijson
   - stored procedures
@@ -44,43 +96,9 @@ The Snowpark stored procedure, will not be performing a copy of the file into lo
 sometimes even the compresssed ones can be larger in size, greater than 500 MB. The dynamic file access feature
 allow us to read the file directly from the stage.
 
-### Why Snowpark (python) stored procedure ?
 
-The pricing transperancy files uncompressed can be multi GB order magnitude larger, Parsing these large 
-files using UDTF is not possible as there is a time limit of 30 seconds for the UDTF to finish execution. 
-Otherwise you will get a REQUEST_TIMEOUT exception.
 
-Stored procedures are however not constrained by such low time limits, they can run for multiple hours, ideally
-in a dedicated warehouse.
 
-We did look at adopting Java Stored Procedure, however this is a [limitation](https://docs.snowflake.com/en/sql-reference/stored-procedures-java.html#limitations) around reading and writing of files. Hence using we ruled this out.
-
-![](./doc/images/limitation_java_stored_proc.png)
-
-When using Stored procedure, the sandbox environment is limited to 0.5GB and some more, based on the warehouse type
-being used. In any case, these pricing transperancy files when uncompressed could potentially exceed these space limitations
-hence we need to implement a solution that should be able to process the file as a stream, idealy a compressed file stream.
-
-The [IJSON](https://pypi.org/project/ijson/) library is a widely adopted library in the python space, for processing 
-large json files. This library was default available in the Snowflake Anaconda channel too. The library had the 
-unique functionality to parse the json file, which are streamed and does not require to load the entire file. Thus 
-Snowpark python stored procedure was the choice for the implementation.
-
-### Can we load the entire file into a single record ?
-
-The short answer NO. You also cannot create a generic solution that will ingest the data into a table.
-There are some close relations between various segments.
-
-More over there is a vast multiplicity on segments, makes the process complex. Without understanding these
-and blindly loading the data will result in 16MB constraint of Snowflake.
-
-Hence a good understanding of the data schema is a requirement. 
-  - [doc: in-network-rates](https://github.com/CMSgov/price-transparency-guide/tree/master/schemas/in-network-rates)
-
-For the in-network-rates implementation, we split and store on the following fields
-  - negotiated_rates
-  - bundled_codes
-  - covered_services
 
 ### Ingestion / Processing time
 
