@@ -47,7 +47,7 @@ NOTE: downloading of files to a stage, is still out of scope. As this is not pos
 
 Ingested sample of in_network_rates:negotiated_rates 
 
-![](doc/images/in_network_rates.png)
+![](doc/soln_images/in_network_rates.png)
 
 ### Post ingestion sqls
 Here are some queries that can be issued against the data.
