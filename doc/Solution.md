@@ -1,10 +1,42 @@
 
-## Solution
+# Solution
 
-The pricing files are stored in a stage, We then use Snowpark(python) stored procedures to parse
+### TLDR; version
+- The pricing files are stored in a stage
+- We build a DAG with tasks. These tasks are implemented using Snowpark(python) stored procedures. 
+  Using 'Dynamic File Access' and the [IJSON](https://pypi.org/project/ijson/) library, the procedures will be parsing the file for specific ranges of segments (passed via parameters). The files are stored as parquet files in an external stage. The files are stored in a partitioned folders.
+- An external table will be defined to read these parquet files.
+
+Further processing of the data is left to user of data.
+
+### Solution Walthru
+
+#### Factors for spliting the files
+
+
+#### How to parse the files
+
+  - ijson
+  - stored procedures
+  - staging of parquet files
+  - partitioning
+  - storing the sections as json
+
+#### Tasks & DAGS
+
+
+#### Views, further processings
+
+
+### Limitations & Next steps
+
+
+
+
+
 the data from the stage and ingest the same into Snowflake. We depend on Python Dynamic file access feature.
 
-![](./images/solution.png)
+![](./soln_images/solution.png)
 
 The Snowpark stored procedure, will not be performing a copy of the file into local sandbox environment, as
 sometimes even the compresssed ones can be larger in size, greater than 500 MB. The dynamic file access feature
