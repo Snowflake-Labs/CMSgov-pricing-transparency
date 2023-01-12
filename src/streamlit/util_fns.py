@@ -64,7 +64,8 @@ def load_sample_and_display_table(p_session: Session ,p_table: str ,p_sample_row
     st.write(f'sampling target table {p_table} ...')
     tbl_df = (p_session
         .table(p_table)
-        .sample(n=p_sample_rowcount)
+        .limit(p_sample_rowcount)
+        #.sample(n=p_sample_rowcount)
         .to_pandas())
 
     st.dataframe(tbl_df ,use_container_width=True)
