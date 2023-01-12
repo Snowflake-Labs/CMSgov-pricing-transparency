@@ -35,6 +35,11 @@ config = L.get_config(PROJECT_HOME_DIR)
 #-----------------------------------------------------
 # Run the Setup scripts
 import os ,datetime
+from PIL import Image
+
+st.write(f'''## Target database: {config['APP_DB']['database']}.{config['APP_DB']['schema']}''')
+st.write(f'''## Target role: {config['APP_DB']['role']}''')
+st.write(f'''## Target Warehouse: {config['SNOW_CONN']['warehouse']}''')
 
 # Custom CSS to color the button.
 st.markdown(""" <style>
@@ -77,6 +82,9 @@ with st.expander("Step 2- Create external stage" , False):
             ```
         '''
         st.write(desc)
+
+        image = Image.open(f'{PROJECT_HOME_DIR}/doc/soln_images/external_stage_creation.png')
+        st.image(image, caption='External stage creation using worksheet')
 
 with st.expander("Step 3- Define functions and procedures" , False):
     script_output_3 = st.empty()

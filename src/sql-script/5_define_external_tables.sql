@@ -5,19 +5,31 @@ use warehouse &SNOW_CONN_warehouse;
 use schema &APP_DB_database.public;
 
 -- -- =========================
+-- create or replace external table ext_negotiated_arrangments_staged(
+--     p_data_fl varchar as ( split_part(metadata$filename, '/', 2) )
+--     ,p_segment_id varchar as ( split_part(metadata$filename, '/', 3) )
+--     ,p_negotiation_arrangement varchar as ( split_part( split_part(metadata$filename, '/', 3), '::', 1) )
+--     ,p_billing_code_type varchar as ( split_part(split_part(metadata$filename, '/', 3), '::', 2) )
+--     ,p_billing_code varchar as ( split_part(split_part(metadata$filename, '/', 3), '::', 3) )
+--     ,p_billing_code_type_version varchar as ( split_part(split_part(metadata$filename, '/', 3), '::', 4) )
+--     -- ,p_segment_idx number as ( split_part(split_part(metadata$filename, '/', 3), '::', 5) )
+--     -- ,p_extended_attr varchar as ( split_part(split_part(metadata$filename, '/', 3), '::', 6) )
+--     ,p_segment_type varchar as ( split_part(metadata$filename, '/', 4) )
+-- )
+-- partition by (p_data_fl ,p_segment_id ,p_negotiation_arrangement ,p_billing_code_type ,p_billing_code ,p_billing_code_type_version ,p_segment_type)
+-- location = @&APP_DB_ext_stage/&APP_DB_folder_parsed/ 
+-- file_format = ( type = parquet )
+-- ;
+
 create or replace external table ext_negotiated_arrangments_staged(
     p_data_fl varchar as ( split_part(metadata$filename, '/', 2) )
-    ,p_segment_id varchar as ( split_part(metadata$filename, '/', 3) )
-    ,p_negotiation_arrangement varchar as ( split_part( split_part(metadata$filename, '/', 3), '::', 1) )
-    ,p_billing_code_type varchar as ( split_part(split_part(metadata$filename, '/', 3), '::', 2) )
-    ,p_billing_code varchar as ( split_part(split_part(metadata$filename, '/', 3), '::', 3) )
-    ,p_billing_code_type_version varchar as ( split_part(split_part(metadata$filename, '/', 3), '::', 4) )
-    -- ,p_segment_idx number as ( split_part(split_part(metadata$filename, '/', 3), '::', 5) )
-    -- ,p_extended_attr varchar as ( split_part(split_part(metadata$filename, '/', 3), '::', 6) )
-    ,p_segment_type varchar as ( split_part(metadata$filename, '/', 4) )
+    ,p_billing_code varchar as ( split_part(metadata$filename, '/', 3) )
+    ,p_billing_code_type_and_version varchar as ( split_part(metadata$filename, '/', 4) )
+    ,p_negotiation_arrangement varchar as ( split_part(metadata$filename, '/', 5) )
+    ,p_segment_type varchar as ( split_part(metadata$filename, '/', 6) )
 )
-partition by (p_data_fl ,p_segment_id ,p_negotiation_arrangement ,p_billing_code_type ,p_billing_code ,p_billing_code_type_version ,p_segment_type)
-location = @ext_data_stg/raw_parsed/
+partition by (p_data_fl ,p_negotiation_arrangement ,p_billing_code ,p_billing_code_type_and_version ,p_segment_type)
+location = @&APP_DB_ext_stage/&APP_DB_folder_parsed/ 
 file_format = ( type = parquet )
 ;
 
@@ -29,9 +41,8 @@ select
     ,p_data_fl as data_fl_basename
     ,value:SEQ_NO::int as segment_idx
     ,p_negotiation_arrangement as negotiation_arrangement
-    ,p_billing_code_type as billing_code_type 
     ,p_billing_code as billing_code 
-    ,p_billing_code_type_version as billing_code_type_version 
+    ,p_billing_code_type_and_version as billing_code_type_version_and_version 
     ,value:name::varchar as name
     ,value:description::varchar as description
     ,value:CHUNK_NO::int as chunk_no
@@ -52,9 +63,8 @@ select
     data_file
     ,segment_idx
     ,negotiation_arrangement
-    ,billing_code_type 
     ,billing_code 
-    ,billing_code_type_version 
+    ,billing_code_type_version_and_version 
     ,name
     ,sum(chunk_size) as segment_record_count
 from negotiated_rates_segments_v
@@ -62,9 +72,8 @@ group by
     data_file
     ,segment_idx
     ,negotiation_arrangement
-    ,billing_code_type 
     ,billing_code 
-    ,billing_code_type_version 
+    ,billing_code_type_version_and_version 
     ,name
 order by segment_idx
 ;

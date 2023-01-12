@@ -36,6 +36,7 @@ from datetime import datetime
 from datetime import timedelta
 import time
 import re
+from PIL import Image
 
 st.markdown(f"# Ingest sample data")
 
@@ -64,7 +65,7 @@ DATA_FILE_BASENAME = get_basename_of_datafile(DATA_FILE)
 DATA_FILE_BASENAME_CLEANSED = get_cleansed_file_basename(DATA_FILE)
 TARGET_DATA_STAGE = config['APP_DB']['ext_stage']
 TARGET_FOLDER = config['APP_DB']['folder_parsed']
-SEGMENTS_PER_TASK = 5
+SEGMENTS_PER_TASK = 200
 
 st.write(f'Input DataFile: @{INPUT_DATA_STAGE}/{DATA_STAGE_FOLDER}/{DATA_FILE}')
 st.write(f'Target: @{TARGET_DATA_STAGE}/{TARGET_FOLDER}')
@@ -101,6 +102,18 @@ def invoke_dag_builder():
     st.write(' Status of execution')
     st.write(df)
 
+def get_defined_tasks():
+    sp_session.sql(f''' SHOW TASKS IN  DATABASE {config['APP_DB']['database']}; ''').collect()
+    sql_stmt = f'''
+        select "name" as task_name
+            ,"warehouse" as warehouse
+            ,"state" as state
+        from table(result_scan(last_query_id()))
+        where "name" like '%{DATA_FILE_BASENAME_CLEANSED.upper()}%'
+        limit 5;
+    '''
+    return sp_session.sql(sql_stmt).collect()
+
 def invoke_dag():
     start_time = time.time()
     print(f'Started at: {datetime.now().strftime("%H:%M:%S")}')
@@ -114,6 +127,9 @@ def invoke_dag():
     for stmt in sql_stmts:
         sp_session.sql(stmt).collect()
 
+    st.write('Wait for about 10 min for the DAG to finish')
+    time.sleep(10*60)
+
     end_time = time.time()
     st.write(f'Ended at: {datetime.now().strftime("%H:%M:%S")}')
 
@@ -121,6 +137,10 @@ def invoke_dag():
     elapsed = str(timedelta(seconds=elapsed_time))
     st.write(f'Elapsed: {elapsed}')
 
+def refresh_tables_stages():
+    sp_session.sql(f''' alter stage {config['APP_DB']['ext_stage']} refresh; ''').collect()
+    # sp_session.sql(f''' alter table ext_negotiated_arrangments_staged refresh; ''').collect()
+    
 
 def build_ui():
 
@@ -140,29 +160,28 @@ def build_ui():
             ,on_click=invoke_dag_builder
         )
 
-        #TODO show the tasks
-    # print('Tasks ,warehouses and state')
-    # sp_session.sql(f''' SHOW TASKS IN  DATABASE {config['APP_DB']['database']}; ''').collect()
-    # stmt = f'''
-    #     select "name" as task_name
-    #         ,"warehouse" as warehouse
-    #         ,"state" as state
-    #     from table(result_scan(last_query_id()))
-    #     where "name" like '%{DATA_FILE_BASENAME_CLEANSED.upper()}%'
-    #     order by state;
-    # '''
+        image = Image.open(f'{PROJECT_HOME_DIR}/doc/soln_images/task_dags.png')
+        st.image(image, caption='Example of Task')
 
-        #TODO display the task_to_segmentids table for this datafile
-    
+        st.write('Defined tasks')
+        tsk_df = get_defined_tasks()
+        st.dataframe(tsk_df)
+
+        st.write('Task to segments mapping')
+        U.load_sample_and_display_table(sp_session ,'TASK_TO_SEGMENTIDS' ,5)
+        
     with st.expander("Step 3- Invoke dag"):
         st.button('Invoke DAG'
             ,on_click=invoke_dag
         )
 
-    #TODO sleep for about 10 mins
-    #display the segment_task_execution_status table for this data file (refer monitor_dag_status notebook)
-    # build out all the other views from notebook monitor_dag_status
-    
+    with st.expander("Step 4- Refresh stages & tables"):
+        st.button('Refresh'
+            ,on_click=refresh_tables_stages
+        )
+
+        U.load_sample_and_display_table(sp_session ,'ext_negotiated_arrangments_staged' ,5)
+        
 # ----------------------------
 if __name__ == "__main__":
     build_ui()
