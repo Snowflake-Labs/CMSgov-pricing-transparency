@@ -68,7 +68,7 @@ def get_file_ingestion_elapsed(p_data_file):
 
 
 def get_segments_loaded_stats(p_data_file):
-    sp_session.sql('alter stage ext_data_stg refresh;').collect()
+    # sp_session.sql('alter stage ext_data_stg refresh;').collect()
 
     sql_stmt = f'''
         with base as (
@@ -124,6 +124,17 @@ def get_tasks_ingestion_stats(p_data_file):
     '''
     return sp_session.sql(sql_stmt)
 
+# def get_files_staged_v2(p_data_file):
+#     sql_stmt = f'''
+#         select relative_path ,size
+#         from directory(@ext_data_stg) as l
+#             ,in_network_rates_file_header as r
+#         where r.data_file =  '{p_data_file}'
+#             and l.relative_path like '{config['APP_DB']['folder_parsed']}/{p_data_file[0:5]}%'
+#         limit 5
+#     '''
+#     return sp_session.sql(sql_stmt)
+
 def get_files_staged(p_data_file):
     sql_stmt = f'''
         select relative_path ,size
@@ -139,7 +150,7 @@ def get_segments_stats(p_data_file):
     sql_stmt = f'''
         select 
             * exclude(data_file)
-        from negotiated_rates_segment_stats_v
+        from negotiated_arrangements_header_v
         where data_file = '{p_data_file}'
     '''
     return sp_session.sql(sql_stmt)
