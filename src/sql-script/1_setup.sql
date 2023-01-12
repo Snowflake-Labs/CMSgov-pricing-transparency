@@ -151,3 +151,17 @@ select * from (
     from base as l
 );
     
+
+create or replace view negotiated_arrangements_header_v
+comment = 'header elements of negotiated arragnements'
+as
+select 
+    split_part( segment_id, '::', 1)  as negotiation_arrangement
+    ,split_part( segment_id, '::', 3)  as billing_code
+    ,split_part( segment_id, '::', 2)  as billing_code_type
+    ,split_part( segment_id, '::', 4)  as billing_code_type_version
+    ,split_part( segment_id, '::', 5)  as segment_idx
+    ,split_part( segment_id, '::', 6)  as additional_attr
+    ,*
+from in_network_rates_segment_header
+;
