@@ -98,9 +98,3 @@ As mentioned earlier, the data can be queried via the external table 'ext_negoti
 
 ![](./soln_images/external_data_views.png)
 
-### Limitations & Next steps
-
-- Based on the file size, SLAs will need to vary. For example CIGNA 1TB sized file takes a longer time to ingest vs Priority Health data 10GB sized files takes around 30 min.
-- Based on your needs, further data pipelines would need to be build out and not provided in this demo.
-- Refreshing of external stagest/views will take some time. Hence would be better to ingest these into a native table as post processing pipelines.
-

@@ -1,8 +1,15 @@
 # CMSGov pricing transperancy
-
 **Dated:** Nov-2022
 
 Demonstration of ingesting pricing transperancy data natively into Snowflake. (Without the need of an external tools and processes.)
+
+## TOC
+- Health plan price transparency
+- Ingesting Pricing Transperancy Files
+- Documentation Links
+- Concerns and Limitations
+- Liability
+- Snowflake Features
 
 ### Health plan price transparency
 
@@ -42,7 +49,7 @@ Hence, this repo is a demonstration of how to ingest large files (json) using Sn
 
 NOTE: downloading of files to a stage, is still out of scope. As this is not possible in Snowflake.
 
-## Links
+## Documentation Links
 - [Doc: Ingestion process flow](./doc/Ingestion_process_flow.md)
 - [Doc: Solution walk thru](./doc/Solution.md)
 - [Doc: Setup and demo execution](./doc/Setup_demo_execution.md)
@@ -50,8 +57,14 @@ NOTE: downloading of files to a stage, is still out of scope. As this is not pos
 ## Concerns and Limitations
    
   - The current implementation has been tested only with some samples from CIGNA & Priority Health; Further tests need to be conducxted on larger file sizes
-  - All code is shared as-is, It is upto the consumer to productionalize the work and update the code/functionality based on thier situation. We will not be supporting or liable. Effort will be taken to help the consumer to answer any queries related to the functionality  
+  - Based on the file size, SLAs will vary. For example CIGNA 1TB sized file takes a longer time to ingest vs Priority Health data 10GB sized files takes around 30 min.
+  - Based on your needs, further data pipelines would need to be build out and not provided in this demo.
+  - Refreshing of external stagest/views will take some time. Hence would be better to have a post processing steps to ingest specific portions of the data based on your needs.
+
+## Liability 
+  - All code is shared as-is, It is upto the consumer to productionalize the work and update the code/functionality based on thier situation. We will not be supporting or liable. Effort will be taken to help the consumer to answer any queries related to the functionality 
 
 ### Snowflake Features
 
   - *Python Dynamic file access:*
+  - *DAG & Tasks*
