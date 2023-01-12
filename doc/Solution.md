@@ -9,7 +9,7 @@
 
 Further processing of the data is left to user of data.
 
-### Solution Walthru
+### Solution Walkthrough
 
 ![](./soln_images/solution.png)
 

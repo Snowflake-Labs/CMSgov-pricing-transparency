@@ -97,5 +97,6 @@ create or replace procedure delete_dag_for_datafile(staged_data_flname varchar ,
     handler = 'delete_dag_for_datafile.main'
 ;
 
--- call delete_dag_for_datafile('2022_10_01_priority_health_HMO_in-network-rates.zip' ,false);
+-- call delete_dag_for_datafile('2022_10_01_priority_health_HMO_in-network-rates.zip' ,true);
+-- call delete_dag_for_datafile('reduced_sample_data.json' ,true);
 -- =========================

@@ -138,8 +138,8 @@ def get_segment_id(p_rec ,p_segment_idx):
     values_concatted = [ f'{k}={p_rec[k]}' for k in p_rec.keys() if k not in keys_to_ignore]
     values_concatted = '^'.join(values_concatted)
 
-    segment_id = f'''{negotiation_arrangement}::{billing_code_type}::{billing_code}::{billing_code_type_version}::{p_segment_idx}::{values_concatted}'''
-    segment_id = re.sub('[^0-9a-zA-Z:=]+', '_', segment_id).lower()
+    segment_id = f'''{negotiation_arrangement}::{billing_code_type}::{billing_code_type_version}::{billing_code}::{p_segment_idx}::{values_concatted}'''
+    segment_id = re.sub('[^0-9a-zA-Z:=\^]+', '_', segment_id).lower()
     return segment_id
 
 def parse_save_segment_children(p_seq_no: int ,p_segment_id: str ,p_out_folder: str 
@@ -166,7 +166,16 @@ def parse_save_segment_children(p_seq_no: int ,p_segment_id: str ,p_out_folder: 
         if not os.path.exists(p_out_folder):
             os.makedirs(p_out_folder)
 
-        out_file = os.path.join(p_out_folder ,p_segment_id ,p_children_type , f'data_{p_seq_no}_{chunk_idx}.parquet.gz')
+        # out_file = os.path.join(p_out_folder ,p_segment_id ,p_children_type , f'data_{p_seq_no}_{chunk_idx}.parquet.gz')
+        sub_path = [
+            str(curr_rec['billing_code'])
+            ,f'''{str(curr_rec['billing_code_type'])}-{str(curr_rec['billing_code_type_version'])}'''
+            ,str(curr_rec['negotiation_arrangement'])
+            ,p_children_type
+            ,f'data_{p_segment_id}_{chunk_idx}.parquet.gz'
+        ]
+        out_file = os.path.join(p_out_folder ,*sub_path)
+
         #automatically create parent folders if it does not exists to avoid errors
         os.makedirs(os.path.dirname(out_file), exist_ok=True)
         
