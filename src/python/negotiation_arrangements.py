@@ -269,7 +269,7 @@ def parse_breakdown_save_wrapper(p_session: Session
 
     rdata = ''
     if json_fl.endswith('.json'):
-        with _snowflake.open(json_fl) as f:
+        with _snowflake.open(json_fl,is_owner_file=True) as f:
             iterated_segments ,eof_reached ,stored_segment_count = parse_breakdown_save(p_session 
                 ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)
@@ -290,13 +290,13 @@ def parse_breakdown_save_wrapper(p_session: Session
         #     parsing_error = str(e)
 
     elif json_fl.endswith('.gz'):
-        with gzip.open(_snowflake.open(json_fl),'r') as f:
+        with gzip.open(_snowflake.open(json_fl,is_owner_file=True),'r') as f:
             iterated_segments ,eof_reached ,stored_segment_count = parse_breakdown_save(p_session 
                 ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)   
 
     elif json_fl.endswith('.zip'):
-        with ZipFile(_snowflake.open(json_fl)) as zf:
+        with ZipFile(_snowflake.open(json_fl,is_owner_file=True)) as zf:
             for file in zf.namelist():
                 with zf.open(file) as f:
                     iterated_segments ,eof_reached ,stored_segment_count = parse_breakdown_save(p_session 
