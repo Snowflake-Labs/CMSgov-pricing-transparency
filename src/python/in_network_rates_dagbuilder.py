@@ -128,6 +128,7 @@ def create_root_task_and_fh_loader(p_session: Session
     root_task_name = f'''DAG_ROOT_{fl_basename}'''
     fh_task_name = f't_fh_{fl_basename}'
     segment_header_task_name = f't_segh_{fl_basename}'
+    provider_reference_task_name = f't_provref_{fl_basename}'
 
     sql_stmts = [
         f'alter task if exists {root_task_name} suspend;' 
@@ -153,16 +154,24 @@ def create_root_task_and_fh_loader(p_session: Session
         ,f'alter task if exists {fh_task_name} resume;'
 
         ,f'''
+        create or replace task {provider_reference_task_name}
+            warehouse = {p_warehouse}
+            comment = 'provider references segment data ingestor for file: {p_datafile}'
+            after {fh_task_name} 
+            as 
+            call provider_references('{p_stage_path}','{p_datafile}');
+        '''
+        ,f'alter task if exists {provider_reference_task_name} resume;'
+
+        ,f'''
         create or replace task {segment_header_task_name}
             warehouse = {p_warehouse}
             comment = 'segment header data ingestor for file: {p_datafile}'
-            after {fh_task_name} 
+            after {provider_reference_task_name} 
             as 
             call negotiation_arrangements_header('{p_stage_path}','{p_datafile}');
         '''
         ,f'alter task if exists {segment_header_task_name} resume;'
-
-
     ]
     for stmt in sql_stmts:
         p_session.sql(stmt).collect()

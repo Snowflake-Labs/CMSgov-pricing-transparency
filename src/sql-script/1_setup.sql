@@ -83,6 +83,16 @@ create or replace transient table task_to_segmentids (
 comment = 'Maps the task that would be spunned to parse the data file. Indicates the segments that should be parsed by these task instances'
 ;
 
+create or replace transient table in_network_rates_provider_references (
+    seq_no number
+    ,data_file varchar
+    ,segment_id varchar
+    ,provider_reference variant
+    ,inserted_at timestamp default current_timestamp()
+)
+comment = 'Used for storing individual provider reference records'
+;
+
 create or replace transient table in_network_rates_segment_header (
     data_file varchar
     ,segment_id varchar

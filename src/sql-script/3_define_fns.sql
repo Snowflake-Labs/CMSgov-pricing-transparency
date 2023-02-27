@@ -1,6 +1,6 @@
 
 -- The following resources are assumed and pre-existing
-use role public;
+use role &APP_DB_role;
 use warehouse &SNOW_CONN_warehouse;
 use schema &APP_DB_database.public;
 
@@ -54,6 +54,20 @@ create or replace procedure negotiation_arrangements_header(
     imports = ('@lib_stg/scripts/negotiation_arrangements_header.py' 
         ,'@lib_stg/scripts/sp_commons.py')
     handler = 'negotiation_arrangements_header.main'
+;
+
+-- =========================
+PUT file://./src/python/provider_references.py @lib_stg/scripts overwrite = true;
+
+create or replace procedure provider_references(
+        stage_path varchar ,staged_data_flname varchar)
+    returns variant
+    language python
+    runtime_version = '3.8'
+    packages = ('snowflake-snowpark-python' ,'pandas', 'ijson' ,'simplejson')
+    imports = ('@lib_stg/scripts/provider_references.py' 
+        ,'@lib_stg/scripts/sp_commons.py')
+    handler = 'provider_references.main'
 ;
 
 -- =========================
