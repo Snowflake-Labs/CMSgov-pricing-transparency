@@ -50,9 +50,11 @@ def parse_breakdown_save(p_session: Session
         ,p_stage_path: str ,p_datafile: str ,f):
     logger.info('Parsing and breaking down in_network ...')
     
+
     provider_references = []
     segment_idx = 0
     stored_segment_idx = 0
+    
     for provider_ref_rec in ijson.items(f, 'provider_references.item' ,use_float=True):
         segment_idx += 1
 
@@ -68,7 +70,11 @@ def parse_breakdown_save(p_session: Session
         provider_references.append(rec)
         stored_segment_idx += 1
 
-    save_provider_references(p_session ,provider_references)
+    # The provider reference section is an optional element
+    # dont do save if its not present; otherwise u will get an exception
+    if(len(provider_references) > 0):
+        save_provider_references(p_session ,provider_references)
+    
     return stored_segment_idx
 
 def parse_breakdown_save_wrapper(p_session: Session 
