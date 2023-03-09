@@ -1,4 +1,5 @@
 #ref https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#create-env-file-manually
+# conda env create -f .devcontainer/conda_pyspark_environment.yml
 
 name: pysnowpark
 channels:
@@ -11,10 +12,6 @@ dependencies:
   - pandas
   - numpy
   - ipykernel
-  - pandas-profiling
-  - ipywidgets
-  - seaborn
-  - bokeh
   - pip
   - pip:
     - snowflake-cli-labs
