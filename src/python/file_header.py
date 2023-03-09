@@ -63,8 +63,14 @@ def parse_header_elements(p_session: Session
 
         elif ('in_network' in prefix):
             continue
+        
+        elif ('provider_references' in prefix):
+            # will be handled by the provider_reference task/stored proc
+            continue
+
         elif( value is None):
             continue
+        
         elif(len(prefix.strip()) < 1):
             continue
         
