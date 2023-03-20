@@ -15,6 +15,40 @@ import sflk_base as L
 
 logger = logging.getLogger('app')
 
+def exec_python_script(p_pyscript: str ,p_cache_id) -> bool:
+    '''
+        Executes a python script and writes the output to a textbox.
+    '''
+    script_executed = False
+    logger.info(f'Executing python script: {p_pyscript} ...')
+    # Capture script output.
+    script_output = []
+    process = subprocess.Popen(
+        ['python'
+        ,p_pyscript]
+        ,stdout=subprocess.PIPE
+        ,universal_newlines=True)
+
+    while True:
+        output = process.stdout.readline()
+        script_output.append(output)
+        return_code = process.poll()
+        
+        if return_code is not None:
+            script_output.append(f'RETURN CODE: {return_code} \n')
+            script_executed = True
+
+            # Process has finished, read rest of the output 
+            for output in process.stdout.readlines():
+                script_output.append(output)
+
+            break
+
+    script_output.append('\n --- Finished executing script ---')
+    st.session_state[p_cache_id] = script_output
+
+    return script_executed
+    
 def exec_sql_script(p_sqlscript: str ,p_cache_id) -> bool:
     '''
         Executes a sql script and writes the output to a textbox.
@@ -56,6 +90,46 @@ def exec_sql_script(p_sqlscript: str ,p_cache_id) -> bool:
 
     return script_executed
 
+def exec_shell_script(p_shellscript: str ,p_cache_id) -> bool:
+    '''
+        Executes a sql script and writes the output to a textbox.
+    '''
+    script_executed = False
+    logger.info(f'Executing shell script: {p_shellscript} ...')
+    
+    # Capture script output.
+    script_output = []
+
+    process = subprocess.Popen(
+        ['bash'
+        ,p_shellscript]
+        ,stdout=subprocess.PIPE
+        ,universal_newlines=True)
+
+    while True:
+        output = process.stdout.readline()
+        # st.write(output)
+        script_output.append(output)
+        return_code = process.poll()
+        
+        if return_code is not None:
+            # st.write(f'RETURN CODE: {return_code} \n')
+            script_output.append(f'RETURN CODE: {return_code} \n')
+            script_executed = True
+
+            # Process has finished, read rest of the output 
+            for output in process.stdout.readlines():
+                # st.write(output)
+                script_output.append(output)
+
+            break
+
+    script_output.append('\n --- Finished executing script ---')
+    if 'output' not in st.session_state:
+        # Write the Script Output to the Session.
+        st.session_state[p_cache_id] = script_output
+
+    return script_executed
 
 def load_sample_and_display_table(p_session: Session ,p_table: str ,p_sample_rowcount :int):
     '''
@@ -64,8 +138,7 @@ def load_sample_and_display_table(p_session: Session ,p_table: str ,p_sample_row
     st.write(f'sampling target table {p_table} ...')
     tbl_df = (p_session
         .table(p_table)
-        .limit(p_sample_rowcount)
-        #.sample(n=p_sample_rowcount)
+        .sample(n=p_sample_rowcount)
         .to_pandas())
 
     st.dataframe(tbl_df ,use_container_width=True)
