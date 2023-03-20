@@ -76,9 +76,10 @@ with st.expander("Step 2- Create external stage" , False):
                 use schema {config['APP_DB']['database']}.public;
 
                 create or replace stage ext_data_stg
-                directory = ( enable = true )
                 url = 's3://sf-gsi-XYZ/'
-                credentials = ( AWS_KEY_ID = 'ABCDEF' AWS_SECRET_KEY = '1234EFG' );
+                credentials = ( AWS_KEY_ID = 'ABCDEF' AWS_SECRET_KEY = '1234EFG' )
+                directory = ( enable = true refresh_on_create = false )
+                ;
             ```
         '''
         st.write(desc)
