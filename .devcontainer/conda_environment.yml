@@ -1,5 +1,5 @@
 #ref https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#create-env-file-manually
-# conda env create -f .devcontainer/conda_pyspark_environment.yml
+# conda env create -f .devcontainer/conda_environment.yml
 
 name: pysnowpark
 channels:
