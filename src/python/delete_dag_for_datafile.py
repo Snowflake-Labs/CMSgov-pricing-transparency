@@ -43,7 +43,8 @@ def delete_taskdefinitions_for_datafile(p_session: Session ,p_datafile: str ,p_d
 
         if (p_drop_tasks == True):
             p_session.sql(f'''drop task if exists {r['TASK_NAME']};'''  ).collect()
-    tasks_dropped.append(r['TASK_NAME'])
+    
+        tasks_dropped.append(r['TASK_NAME'])
 
     return tasks_dropped
 

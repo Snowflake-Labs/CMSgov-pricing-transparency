@@ -82,7 +82,7 @@ def custom_page_styles():
 
 def display_connection_info():
     with st.expander("Snowflake Connection Information", expanded=True):
-        c1, s1, c2, s2, c3, s3, c4, s4, c5 = st.columns([1, 0.1, 2.5, 0.1, 2.5, 0.1, 1, 0.1, 1])
+        c1, s1, c2, s2, c3, s3, c4, s4 = st.columns([1, 0.1, 2.5, 0.1, 2.5, 0.1, 1, 0.1])
         with s1:
             st.markdown(
                 """<div style="border: 1px solid lightgrey; height: 60px; width:2px; background-color: lightgrey;"></div> """,
@@ -107,15 +107,12 @@ def display_connection_info():
             st.metric("Account", f"{account}")
 
         with c2:
-            st.metric("IOTBridge staging database", f"{config['APP_DB']['database']}.{config['APP_DB']['schema']}")
+            st.metric("Database", f"{config['APP_DB']['database']}.{config['APP_DB']['schema']}")
 
         with c3:
-            st.metric("Modelling database", f"{config['APP_DB']['database']}.{config['APP_DB']['schema']}")
-
-        with c4:
             st.metric("Warehouse", f"{config['SNOW_CONN']['warehouse']}")
 
-        with c5:
+        with c4:
             st.metric("Role", f"{config['SNOW_CONN']['role']}")
 
     st.markdown("""<hr style="height:40px; font-size:2px; width:99%; border:none;color:none;" /> """,
