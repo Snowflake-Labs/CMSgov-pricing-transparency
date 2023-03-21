@@ -8,7 +8,7 @@ import pandas as pd
 import ijson
 from snowflake.snowpark.session import Session
 import snowflake.snowpark.functions as F
-import _snowflake
+from snowflake.snowpark.files import SnowflakeFile
 import shutil
 import simplejson as sjson
 import hashlib
@@ -88,7 +88,7 @@ def parse_breakdown_save_wrapper(p_session: Session
 
     rdata = ''
     if json_fl.endswith('.json'):
-        with _snowflake.open(json_fl,is_owner_file=True) as f:
+        with SnowflakeFile.open(json_fl,require_scoped_url=False) as f:
             stored_segment_count = parse_breakdown_save(p_session 
                 ,p_stage_path ,p_datafile ,f)
 
@@ -100,7 +100,7 @@ def parse_breakdown_save_wrapper(p_session: Session
         #     rec_count ,eof_reached = (1 ,True)
         #     from io import BytesIO
         #     import tarfile
-        #     with tarfile.open(fileobj = BytesIO(_snowflake.open(json_fl))) as f:
+        #     with tarfile.open(fileobj = BytesIO(SnowflakeFile.open(json_fl))) as f:
         #         rec_count ,eof_reached = parse_breakdown_save(p_session 
         #             ,p_stage_path ,p_datafile ,p_target_stage 
         #             ,p_from_seg ,p_to_seg ,f)
@@ -108,12 +108,12 @@ def parse_breakdown_save_wrapper(p_session: Session
         #     parsing_error = str(e)
 
     elif json_fl.endswith('.gz'):
-        with gzip.open(_snowflake.open(json_fl,is_owner_file=True),'r') as f:
+        with gzip.open(SnowflakeFile.open(json_fl,require_scoped_url=False),'r') as f:
             stored_segment_count = parse_breakdown_save(p_session 
                 ,p_stage_path ,p_datafile ,f)   
 
     elif json_fl.endswith('.zip'):
-        with ZipFile(_snowflake.open(json_fl,is_owner_file=True)) as zf:
+        with ZipFile(SnowflakeFile.open(json_fl,require_scoped_url=False)) as zf:
             for file in zf.namelist():
                 with zf.open(file) as f:
                     stored_segment_count = parse_breakdown_save(p_session 

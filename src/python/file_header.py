@@ -8,7 +8,7 @@ import pandas as pd
 import ijson
 from snowflake.snowpark.session import Session
 import snowflake.snowpark.functions as F
-import _snowflake
+from snowflake.snowpark.files import SnowflakeFile
 import shutil
 import simplejson as sjson
 import hashlib
@@ -87,17 +87,17 @@ def parse_breakdown_save_wrapper(p_session: Session
     json_fl = f'@{p_stage_path}/{p_datafile}'
 
     if json_fl.endswith('.json'):
-        with _snowflake.open(json_fl,is_owner_file=True) as f:
+        with SnowflakeFile.open(json_fl,require_scoped_url=False) as f:
             l_fl_header = parse_header_elements(p_session 
                 ,p_stage_path ,p_datafile ,f)
 
     elif json_fl.endswith('.gz'):
-        with gzip.open(_snowflake.open(json_fl,is_owner_file=True),'r') as f:
+        with gzip.open(SnowflakeFile.open(json_fl,require_scoped_url=False),'r') as f:
             l_fl_header = parse_header_elements(p_session 
                 ,p_stage_path ,p_datafile ,f)   
 
     elif json_fl.endswith('.zip'):
-        with ZipFile(_snowflake.open(json_fl,is_owner_file=True)) as zf:
+        with ZipFile(SnowflakeFile.open(json_fl,require_scoped_url=False)) as zf:
             for file in zf.namelist():
                 with zf.open(file) as f:
                     l_fl_header = parse_header_elements(p_session 

@@ -25,7 +25,7 @@ RUN apt-get update && \
 
 # Install SNOWSQL into the base conda environment, I tried installing SNOWSQL on the
 # same env as SnowPark, unfortunately it has some complication. Hence SnowSQL
-# Setting up default Python environment to support pyspark and snowflake python connector
+# Setting up default Python environment to support pysnowpark and snowflake python connector
 SHELL ["conda", "run", "/bin/bash", "-c"]
 RUN pip install --upgrade pip
 RUN pip install --upgrade \
@@ -33,10 +33,10 @@ RUN pip install --upgrade \
     snowflake-sqlalchemy
 
 #Setting up Snowpark Python conda environment
-COPY conda_pyspark_environment.yml* /tmp/installation-scripts/ 
+COPY conda_environment.yml* /tmp/installation-scripts/ 
 RUN conda create -n pysnowpark -c https://repo.anaconda.com/pkgs/snowflake python=3.8
 SHELL ["conda", "run", "-n", "pysnowpark", "/bin/bash", "-c"]
-RUN /opt/conda/bin/conda env update -f /tmp/installation-scripts//conda_pyspark_environment.yml
+RUN /opt/conda/bin/conda env update -f /tmp/installation-scripts//conda_environment.yml
 
 #Deploying Snowflake Connectors and Drivers
 COPY install_snowflake.sh* /tmp/installation-scripts/
