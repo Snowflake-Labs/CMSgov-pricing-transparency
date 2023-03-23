@@ -66,5 +66,5 @@ NOTE: downloading of files to a stage, is still out of scope. As this is not pos
 
 ### Snowflake Features
 
-  - *Python Dynamic file access:*
+  - *[Python Dynamic file access](https://docs.snowflake.com/en/LIMITEDACCESS/udf-python-file-handler)*
   - *DAG & Tasks*
