@@ -12,6 +12,22 @@
 #       However, this means that streamlit app cannot be developed via the local(docker)
 #       environment. 
 
+## ------------------------------------------------------------------------------------------------
+# Copyright (c) 2023 Snowflake Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.You may obtain 
+# a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+    
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+# See the License for the specific language governing permissions andlimitations 
+# under the License.
+## ------------------------------------------------------------------------------------------------
+
 #FROM --platform=linux/amd64 continuumio/miniconda3
 FROM continuumio/miniconda3
 
@@ -25,7 +41,7 @@ RUN apt-get update && \
 
 # Install SNOWSQL into the base conda environment, I tried installing SNOWSQL on the
 # same env as SnowPark, unfortunately it has some complication. Hence SnowSQL
-# Setting up default Python environment to support pyspark and snowflake python connector
+# Setting up default Python environment to support pysnowpark and snowflake python connector
 SHELL ["conda", "run", "/bin/bash", "-c"]
 RUN pip install --upgrade pip
 RUN pip install --upgrade \
@@ -33,10 +49,10 @@ RUN pip install --upgrade \
     snowflake-sqlalchemy
 
 #Setting up Snowpark Python conda environment
-COPY conda_pyspark_environment.yml* /tmp/installation-scripts/ 
+COPY conda_environment.yml* /tmp/installation-scripts/ 
 RUN conda create -n pysnowpark -c https://repo.anaconda.com/pkgs/snowflake python=3.8
 SHELL ["conda", "run", "-n", "pysnowpark", "/bin/bash", "-c"]
-RUN /opt/conda/bin/conda env update -f /tmp/installation-scripts//conda_pyspark_environment.yml
+RUN /opt/conda/bin/conda env update -f /tmp/installation-scripts//conda_environment.yml
 
 #Deploying Snowflake Connectors and Drivers
 COPY install_snowflake.sh* /tmp/installation-scripts/

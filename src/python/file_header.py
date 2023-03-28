@@ -1,6 +1,22 @@
 '''
     Used for parsing and staging specifically the file header.
 '''
+## ------------------------------------------------------------------------------------------------
+# Copyright (c) 2023 Snowflake Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.You may obtain 
+# a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+    
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+# See the License for the specific language governing permissions andlimitations 
+# under the License.
+## ------------------------------------------------------------------------------------------------
+
 import sys ,os ,io ,json ,logging ,re
 import uuid ,gzip
 from zipfile import ZipFile
@@ -8,7 +24,7 @@ import pandas as pd
 import ijson
 from snowflake.snowpark.session import Session
 import snowflake.snowpark.functions as F
-import _snowflake
+from snowflake.snowpark.files import SnowflakeFile
 import shutil
 import simplejson as sjson
 import hashlib
@@ -87,17 +103,17 @@ def parse_breakdown_save_wrapper(p_session: Session
     json_fl = f'@{p_stage_path}/{p_datafile}'
 
     if json_fl.endswith('.json'):
-        with _snowflake.open(json_fl,is_owner_file=True) as f:
+        with SnowflakeFile.open(json_fl,require_scoped_url=False) as f:
             l_fl_header = parse_header_elements(p_session 
                 ,p_stage_path ,p_datafile ,f)
 
     elif json_fl.endswith('.gz'):
-        with gzip.open(_snowflake.open(json_fl,is_owner_file=True),'r') as f:
+        with gzip.open(SnowflakeFile.open(json_fl,require_scoped_url=False),'r') as f:
             l_fl_header = parse_header_elements(p_session 
                 ,p_stage_path ,p_datafile ,f)   
 
     elif json_fl.endswith('.zip'):
-        with ZipFile(_snowflake.open(json_fl,is_owner_file=True)) as zf:
+        with ZipFile(SnowflakeFile.open(json_fl,require_scoped_url=False)) as zf:
             for file in zf.namelist():
                 with zf.open(file) as f:
                     l_fl_header = parse_header_elements(p_session 

@@ -3,6 +3,7 @@
 ## TOC
 - [TOC](#toc)
   - [ Note on production readiness](#-note-on-production-readiness)
+  - [About the sample data](#about-the-sample-data)
   - [ How to setup and run the demo (Locally)](#-how-to-setup-and-run-the-demo-locally)
     - [Installation tools:](#installation-tools)
     - [Setup project:](#setup-project)
@@ -15,6 +16,11 @@
 This demo is not meant for production, as there are some steps which needs to hardened for a real-production ready worth. Also every organization have thier own policies of defining real-production ready worth.
 
 Since the main aspect of the solution is how to solve the probelem of parsing a large sized data file. It does not mean that we have followed all the necessary best-practices in the demo w.r.t Custom roles, security, data zones etc.. These will need to be tuned to your environment needs.
+
+### About the sample data
+I have supplied some sample data that was used during development:
+  - [2022_10_01_priority_health_HMO_in-network-rates.zip](../data/2022_10_01_priority_health_HMO_in-network-rates.zip), this was sourced from  https://www.priorityhealth.com/landing/transparency
+  - [reduced_sample_data.json](data/reduced_sample_data.json), this is a derived copy of the above data with lot of data removed for easier testing/demo purposes.
 
 ### <a name="-how-to-setup-and-run-the-demo-locally"></a> How to setup and run the demo (Locally)
 In case if you do not have access to GitHub codespace environment, follow these steps to run the demo.

@@ -1,3 +1,19 @@
+## ------------------------------------------------------------------------------------------------
+# Copyright (c) 2023 Snowflake Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.You may obtain 
+# a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+    
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+# See the License for the specific language governing permissions andlimitations 
+# under the License.
+## ------------------------------------------------------------------------------------------------
+
 import sys ,os ,io ,json ,logging
 import pandas as pd
 import numpy as np
@@ -43,7 +59,8 @@ def delete_taskdefinitions_for_datafile(p_session: Session ,p_datafile: str ,p_d
 
         if (p_drop_tasks == True):
             p_session.sql(f'''drop task if exists {r['TASK_NAME']};'''  ).collect()
-    tasks_dropped.append(r['TASK_NAME'])
+    
+        tasks_dropped.append(r['TASK_NAME'])
 
     return tasks_dropped
 

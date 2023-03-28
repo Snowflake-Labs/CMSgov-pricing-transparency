@@ -1,6 +1,22 @@
 '''
     Used for parsing and staging specifically the 'negotiated_arrangement' segments.
 '''
+## ------------------------------------------------------------------------------------------------
+# Copyright (c) 2023 Snowflake Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.You may obtain 
+# a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+    
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+# See the License for the specific language governing permissions andlimitations 
+# under the License.
+## ------------------------------------------------------------------------------------------------
+
 import sys ,os ,io ,json ,logging ,re
 import uuid ,gzip
 from zipfile import ZipFile
@@ -8,7 +24,7 @@ import pandas as pd
 import ijson
 from snowflake.snowpark.session import Session
 import snowflake.snowpark.functions as F
-import _snowflake
+from snowflake.snowpark.files import SnowflakeFile
 import shutil
 import simplejson as sjson
 import hashlib
@@ -269,7 +285,7 @@ def parse_breakdown_save_wrapper(p_session: Session
 
     rdata = ''
     if json_fl.endswith('.json'):
-        with _snowflake.open(json_fl,is_owner_file=True) as f:
+        with SnowflakeFile.open(json_fl,require_scoped_url=False) as f:
             iterated_segments ,eof_reached ,stored_segment_count = parse_breakdown_save(p_session 
                 ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)
@@ -282,7 +298,7 @@ def parse_breakdown_save_wrapper(p_session: Session
         #     rec_count ,eof_reached = (1 ,True)
         #     from io import BytesIO
         #     import tarfile
-        #     with tarfile.open(fileobj = BytesIO(_snowflake.open(json_fl))) as f:
+        #     with tarfile.open(fileobj = BytesIO(SnowflakeFile.open(json_fl))) as f:
         #         rec_count ,eof_reached = parse_breakdown_save(p_session 
         #             ,p_stage_path ,p_datafile ,p_target_stage 
         #             ,p_from_seg ,p_to_seg ,f)
@@ -290,13 +306,13 @@ def parse_breakdown_save_wrapper(p_session: Session
         #     parsing_error = str(e)
 
     elif json_fl.endswith('.gz'):
-        with gzip.open(_snowflake.open(json_fl,is_owner_file=True),'r') as f:
+        with gzip.open(SnowflakeFile.open(json_fl,require_scoped_url=False),'r') as f:
             iterated_segments ,eof_reached ,stored_segment_count = parse_breakdown_save(p_session 
                 ,p_stage_path ,p_datafile ,p_target_stage 
                 ,p_from_seg ,p_to_seg ,f)   
 
     elif json_fl.endswith('.zip'):
-        with ZipFile(_snowflake.open(json_fl,is_owner_file=True)) as zf:
+        with ZipFile(SnowflakeFile.open(json_fl,require_scoped_url=False)) as zf:
             for file in zf.namelist():
                 with zf.open(file) as f:
                     iterated_segments ,eof_reached ,stored_segment_count = parse_breakdown_save(p_session 

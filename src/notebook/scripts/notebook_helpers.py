@@ -8,6 +8,7 @@ import os ,json ,requests ,zipfile, tarfile
 from IPython.display import display, HTML, Image , Markdown
 import os ,configparser ,json ,logging ,sys
 from snowflake.snowpark.session import Session
+import pandas as pd
 
 # logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 # logger = logging.getLogger('util')
@@ -127,3 +128,20 @@ from IPython.core.magic import register_cell_magic
 def background(color, cell): 
     set_cell_background(color) 
     return eval(cell)
+
+
+def list_stage(p_session: Session ,p_stage :str):
+    '''
+    Utility function to display contents of a stage
+    '''
+    rows = p_session.sql(f''' list @{p_stage}; ''').collect()
+    data = []
+    for r in rows:
+        data.append({
+            'name': r['name']
+            ,'size': r['size']
+            ,'last_modified': r['last_modified']
+        })
+
+    df = pd.json_normalize(data)
+    return df
