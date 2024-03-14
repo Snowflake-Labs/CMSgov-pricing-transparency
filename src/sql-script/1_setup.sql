@@ -76,6 +76,8 @@ create or replace stage data_stg
 -- =========================
 -- Define tables
 -- =========================
+
+/* Execution status for the various sub-tasks that gets spawned */
 create or replace transient table segment_task_execution_status (
     data_file varchar
     ,task_name varchar
@@ -84,9 +86,10 @@ create or replace transient table segment_task_execution_status (
     ,task_ret_status variant
     ,inserted_at timestamp default current_timestamp()
 )
-comment = 'Execution status for the various sub-tasks that gets spawned'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
+/* Maps the task that would be spunned to parse the data file. Indicates the segments that should be parsed by these task instances */
 create or replace transient table task_to_segmentids (
     bucket varchar
     ,data_file varchar
@@ -96,9 +99,10 @@ create or replace transient table task_to_segmentids (
     ,segments_record_count number
     ,inserted_at timestamp default current_timestamp()
 )
-comment = 'Maps the task that would be spunned to parse the data file. Indicates the segments that should be parsed by these task instances'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
+/* Used for storing individual provider reference records */
 create or replace transient table in_network_rates_provider_references (
     seq_no number
     ,data_file varchar
@@ -106,9 +110,10 @@ create or replace transient table in_network_rates_provider_references (
     ,provider_reference variant
     ,inserted_at timestamp default current_timestamp()
 )
-comment = 'Used for storing individual provider reference records'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
+/* Used for storing header portion of the negotiated arrangements */
 create or replace transient table in_network_rates_segment_header (
     data_file varchar
     ,segment_id varchar
@@ -118,9 +123,10 @@ create or replace transient table in_network_rates_segment_header (
     ,covered_services_count number
     ,inserted_at timestamp default current_timestamp()
 )
-comment = 'Used for storing header portion of the negotiated arragments'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
+/* Used for storing header portion of the pricing transparency files */
 create or replace transient table in_network_rates_file_header (
     data_file varchar
     ,data_file_basename varchar
@@ -128,11 +134,12 @@ create or replace transient table in_network_rates_file_header (
     ,header variant
     ,inserted_at timestamp default current_timestamp()
 )
-comment = 'Used for storing header portion of the pricing transperancy files'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
+/* view to indicate if all the segments were parsed out */
 create or replace view segments_counts_for_datafile_v 
-comment = 'view to indicate if all the segments were parsed out'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 as
 select 
     distinct data_file ,task_name
@@ -146,9 +153,9 @@ from segment_task_execution_status
 where EOF_Reached = True
 order by start_rec_num
 ;
-
+/* list of running tasks that are parsing a data file */
 create or replace view current_segment_parsing_tasks_v
-comment = 'list of running tasks that are parsing a data file'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 as
 select 
     l.*  exclude(data_file ,inserted_at ,end_time ,task_ret_status)
@@ -159,9 +166,9 @@ from segment_task_execution_status as l
             and contains( lower(l.task_name) ,lower(r.assigned_task_name)) = True
 where end_time is null;
 
-
+/* shows the time taken for ingesting of file */
 create or replace view file_ingestion_elapsed_v
-comment = 'shows the time taken for ingesting of file'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 as
 select * from (
     with base as (
@@ -177,9 +184,9 @@ select * from (
     from base as l
 );
     
-
+/* header elements of negotiated arrangements*/
 create or replace view negotiated_arrangements_header_v
-comment = 'header elements of negotiated arragnements'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 as
 select 
     split_part( segment_id, '::', 1)  as negotiation_arrangement

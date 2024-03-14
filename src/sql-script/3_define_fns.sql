@@ -35,6 +35,7 @@ create or replace procedure parse_file_header(
     imports = ('@lib_stg/scripts/file_header.py' 
         ,'@lib_stg/scripts/sp_commons.py')
     handler = 'file_header.main'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
 -- call parse_file_header( 'data_stg/data','reduced_sample_data.json');
@@ -53,6 +54,7 @@ create or replace procedure parse_negotiation_arrangement_segments(
     imports = ('@lib_stg/scripts/negotiation_arrangements.py' 
         ,'@lib_stg/scripts/sp_commons.py')
     handler = 'negotiation_arrangements.main'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
 -- call parse_negotiation_arrangement_segments( 'data_stg/data','reduced_sample_data.json','@ext_data_stg/raw_parsed' ,0 ,10);
@@ -70,6 +72,7 @@ create or replace procedure negotiation_arrangements_header(
     imports = ('@lib_stg/scripts/negotiation_arrangements_header.py' 
         ,'@lib_stg/scripts/sp_commons.py')
     handler = 'negotiation_arrangements_header.main'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
 -- =========================
@@ -84,6 +87,7 @@ create or replace procedure provider_references(
     imports = ('@lib_stg/scripts/provider_references.py' 
         ,'@lib_stg/scripts/sp_commons.py')
     handler = 'provider_references.main'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
 -- =========================
@@ -99,6 +103,7 @@ create or replace procedure in_network_rates_dagbuilder(
     imports = ('@lib_stg/scripts/in_network_rates_dagbuilder.py' 
         ,'@lib_stg/scripts/sp_commons.py')
     handler = 'in_network_rates_dagbuilder.main'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
 create or replace procedure in_network_rates_dagbuilder_matrix(
@@ -111,6 +116,7 @@ create or replace procedure in_network_rates_dagbuilder_matrix(
     imports = ('@lib_stg/scripts/in_network_rates_dagbuilder.py' 
         ,'@lib_stg/scripts/sp_commons.py')
     handler = 'in_network_rates_dagbuilder.main_matrix'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 -- call in_network_rates_dagbuilder('data_stg/data','reduced_sample_data.json','@ext_data_stg/raw_parsed', 200 ,'DEMO_BUILD_WH');
 
@@ -125,6 +131,7 @@ create or replace procedure delete_dag_for_datafile(staged_data_flname varchar ,
     imports = ('@lib_stg/scripts/delete_dag_for_datafile.py' 
         ,'@lib_stg/scripts/sp_commons.py')
     handler = 'delete_dag_for_datafile.main'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 ;
 
 -- call delete_dag_for_datafile('2022_10_01_priority_health_HMO_in-network-rates.zip' ,true);
