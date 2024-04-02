@@ -34,10 +34,12 @@ create or replace external table ext_negotiated_arrangments_staged(
     refresh_on_create = false 
     auto_refresh = false
     file_format = ( type = parquet )
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
     ;
 
+/* a view of negotiated rates segment in stage */
 create or replace view negotiated_rates_segments_v
-    comment = 'a view of negotiated rates segment in stage'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
     as
     select 
         r.data_file as data_file
@@ -58,9 +60,9 @@ create or replace view negotiated_rates_segments_v
     where p_segment_type = 'negotiated_rates'
     ;
 
-
+/* a grouped view of various negotiated rates segment in a file and their sub-ordinate record count */
 create or replace view negotiated_rates_segment_stats_v
-    comment = 'a grouped view of various negotiated rates segment in a file and thier sub-ordinate record count'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
     as
     select 
         data_file
@@ -81,8 +83,9 @@ create or replace view negotiated_rates_segment_stats_v
     order by segment_idx
     ;
 
+/* a flattened view of various negotiated rates segment in a file and their sub-ordinate record count */
 create or replace view negotiated_rates_segment_info_v
-    comment = 'a flattened view of various negotiated rates segment in a file and thier sub-ordinate record count'
+    comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
     as
     select 
         t.* exclude(negotiated_rates)
@@ -93,9 +96,9 @@ create or replace view negotiated_rates_segment_info_v
         , lateral flatten (input => t.negotiated_rates) as nr
     ;
 
-
+/* a flattened view of negotiated prices */
 create or replace view negotiated_prices_v
-comment = 'a flattened view of negotiated prices'
+comment = '{"origin":"sf_sit","name":"pricing_transparency","version":{"major":1, "minor":0},"attributes":{"component":"pricing_transparency"}}'
 as
 select 
     b.* exclude(negotiated_prices)
